@@ -1,0 +1,2148 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>გონიერსა მწვრთნელი უყვარს | ქართული ენის აკადემია</title>
+    <meta name="description" content="ქართული ენისა და ლიტერატურის ინტერაქტიული სასწავლო პლატფორმა — მასალები, ლექსიკონი, ფრაზეოლოგიზმები, დავალებები და ფორუმი.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* ფერთა პალიტრა — ნათელი რეჟიმი */
+        :root {
+            --primary: #4a0e17;
+            --primary-light: #8b1e3f;
+            --primary-soft: #ffe5cf;
+            --accent: #f4b41a;
+            --accent-soft: #fff3c4;
+            --bg-color: #fdf7f0;
+            --bg-gradient: radial-gradient(circle at top left, #ffe5cf 0, #fdf7f0 40%, #f8f2ff 100%);
+            --text-main: #1f2933;
+            --text-muted: #6b7280;
+            --white: #ffffff;
+            --radius: 12px;
+            --radius-pill: 999px;
+            --shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.12);
+            --shadow-subtle: 0 8px 20px rgba(15, 23, 42, 0.06);
+            --border: rgba(148, 163, 184, 0.3);
+            --nav-blur: blur(18px);
+        }
+
+        /* ბნელი რეჟიმი */
+        body.dark-mode {
+            --primary: #f97373;
+            --primary-light: #fb7185;
+            --primary-soft: #2b1622;
+            --accent: #facc15;
+            --accent-soft: #3b2f17;
+            --bg-color: #060714;
+            --bg-gradient: radial-gradient(circle at top left, #3b082f 0, #020617 45%, #111827 100%);
+            --text-main: #e5e7eb;
+            --text-muted: #9ca3af;
+            --white: #020617;
+            --shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.6);
+            --shadow-subtle: 0 8px 20px rgba(0, 0, 0, 0.4);
+            --border: rgba(55, 65, 81, 0.8);
+            --nav-blur: blur(22px);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, sans-serif;
+            transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* ნავიგაცია */
+        nav {
+            background: linear-gradient(to right, rgba(26, 4, 11, 0.92), rgba(74, 12, 34, 0.96));
+            padding: 0.5rem 6%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+            backdrop-filter: var(--nav-blur);
+        }
+
+        .logo {
+            color: var(--accent);
+            font-size: 1.35rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin: 10px 0;
+            letter-spacing: 0.04em;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .logo:hover { color: var(--accent); opacity: 1; }
+        .logo-mark {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: linear-gradient(145deg, #facc15 0%, #eab308 50%, #ca8a04 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 24px rgba(250, 204, 21, 0.4);
+            flex-shrink: 0;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .logo:hover .logo-mark {
+            transform: scale(1.05);
+            box-shadow: 0 10px 28px rgba(250, 204, 21, 0.5);
+        }
+        .logo-mark i {
+            font-size: 1.5rem;
+            color: #1f2933;
+        }
+        .logo-text { display: flex; flex-direction: column; gap: 0; align-items: flex-start; }
+        .logo-title { color: var(--accent); font-size: 1.25rem; font-weight: 800; line-height: 1.2; }
+        .logo-tagline { color: rgba(255,255,255,0.85); font-size: 0.8rem; font-weight: 500; margin-top: 2px; }
+        .logo span.logo-sub { color: #f9fafb; font-weight: 500; font-size: 0.95rem; opacity: 0.95; }
+
+        .nav-links {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-links button {
+            background: transparent;
+            border: none;
+            color: #e5e7eb;
+            padding: 8px 14px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border-radius: var(--radius-pill);
+            border: 1px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+        .nav-links button::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at top, rgba(250, 204, 21, 0.22), transparent 60%);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .nav-links button:hover::after {
+            opacity: 1;
+        }
+        .nav-links button:hover,
+        .nav-links button.active {
+            color: var(--accent);
+            border-color: rgba(250, 204, 21, 0.6);
+            background: radial-gradient(circle at top, rgba(248, 250, 252, 0.06), transparent 70%);
+        }
+        .auth-btn {
+            background: var(--accent) !important;
+            color: #111827 !important;
+            border-radius: var(--radius-pill);
+            padding: 8px 18px !important;
+            margin-left: 8px;
+            box-shadow: 0 10px 25px rgba(250, 204, 21, 0.35);
+        }
+        .theme-btn {
+            color: var(--accent) !important;
+            font-size: 1.25rem;
+            margin-left: 8px;
+        }
+
+        /* სექციები და გრიდები */
+        section {
+            display: none;
+            padding: 40px 6%;
+            max-width: 1200px;
+            margin: 0 auto;
+            min-height: 80vh;
+            animation: fadeIn 0.4s ease-out;
+        }
+        section.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .section-header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--primary);
+        }
+        .section-header h2 {
+            font-size: 2.2rem;
+            font-family: "Georgia", "Sylfaen", serif;
+            color: var(--primary);
+            position: relative;
+            display: inline-block;
+            padding-bottom: 10px;
+        }
+        .section-header h2::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 0;
+            width: 90px;
+            height: 4px;
+            border-radius: var(--radius-pill);
+            background: linear-gradient(to right, var(--accent), var(--primary-light));
+        }
+        .section-header p {
+            margin-top: 10px;
+            color: var(--text-muted);
+        }
+
+        .hero-box {
+            text-align: center;
+            padding: 48px 32px;
+            background: linear-gradient(160deg, rgba(255,255,255,0.95) 0%, var(--white) 100%);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-subtle);
+        }
+        .hero-icon {
+            width: 88px;
+            height: 88px;
+            margin: 0 auto 24px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, var(--accent) 0%, #ca8a04 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 16px 40px rgba(244, 180, 26, 0.35);
+        }
+        .hero-icon i { font-size: 2.5rem; color: #1f2933; }
+        .hero-title { color: var(--primary); font-size: 1.85rem; margin-bottom: 12px; font-family: Georgia, serif; }
+        .hero-desc { max-width: 560px; margin: 0 auto; color: var(--text-muted); font-size: 1.05rem; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 22px;
+        }
+        .card {
+            background: radial-gradient(circle at top left, rgba(250, 204, 21, 0.08), transparent 60%), var(--white);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow-subtle);
+            border: 1px solid var(--border);
+            border-top: 4px solid var(--primary-light);
+            position: relative;
+            overflow: hidden;
+            transform-origin: center;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+        }
+        .card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at top right, rgba(244, 180, 26, 0.12), transparent 55%);
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            pointer-events: none;
+        }
+        .card:hover {
+            transform: translateY(-4px) scale(1.01);
+            box-shadow: var(--shadow-soft);
+            border-color: rgba(250, 204, 21, 0.7);
+        }
+        .card:hover::before {
+            opacity: 1;
+        }
+        #editTasksList {
+            grid-template-columns: minmax(0, 1fr);
+        }
+        #editTasksList textarea {
+            min-height: 180px;
+            resize: vertical;
+        }
+
+        .btn {
+            display: inline-block;
+            background: linear-gradient(to right, var(--primary), var(--primary-light));
+            color: #f9fafb;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            margin-top: 10px;
+            width: 100%;
+            text-align: center;
+            letter-spacing: 0.02em;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.35);
+            position: relative;
+            overflow: hidden;
+        }
+        .btn::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, rgba(255, 255, 255, 0.2), transparent 60%);
+            transform: translateX(-120%);
+            transition: transform 0.32s ease-out;
+        }
+        .btn:hover::after {
+            transform: translateX(0%);
+        }
+        .btn:hover {
+            filter: brightness(1.03);
+        }
+        .btn-accent {
+            background: linear-gradient(to right, var(--accent), #f97316);
+            color: #111827;
+        }
+
+        /* ადმინის პანელი */
+        .admin-toolbar,
+        .upload-panel {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.06), rgba(59, 130, 246, 0));
+            border: 1px dashed rgba(59, 130, 246, 0.7);
+            padding: 12px 18px;
+            border-radius: var(--radius);
+            margin-bottom: 22px;
+            text-align: center;
+            display: none;
+        }
+        .btn-add {
+            background: linear-gradient(to right, #3b82f6, #06b6d4);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 4px;
+            font-size: 0.9rem;
+        }
+        .btn-save {
+            background: linear-gradient(to right, #22c55e, #84cc16);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 4px;
+            font-size: 0.9rem;
+        }
+        .btn-delete {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(248, 113, 113, 0.95);
+            color: white;
+            border: none;
+            padding: 5px 8px;
+            border-radius: 999px;
+            cursor: pointer;
+            display: none;
+            z-index: 10;
+            font-size: 0.75rem;
+            box-shadow: 0 8px 18px rgba(248, 113, 113, 0.6);
+        }
+        .editing-mode [contenteditable="true"]:focus {
+            background: rgba(59, 130, 246, 0.07);
+            outline: 1px dashed #3b82f6;
+        }
+
+        /* ფორმები */
+        .form-box {
+            background: radial-gradient(circle at top left, rgba(250, 204, 21, 0.12), transparent 60%), var(--white);
+            padding: 22px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-subtle);
+            margin-bottom: 22px;
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+        }
+        input[type="text"],
+        input[type="password"],
+        textarea {
+            width: 100%;
+            padding: 10px 12px;
+            margin: 8px 0 10px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--text-main);
+            font-size: 0.95rem;
+        }
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: rgba(59, 130, 246, 0.8);
+            box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.4);
+            background: #f9fafb;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 11px;
+            margin: 10px 0;
+            background: rgba(249, 250, 251, 0.9);
+            border: 1px dashed var(--accent);
+            border-radius: 10px;
+            cursor: pointer;
+            color: var(--text-main);
+            font-size: 0.92rem;
+        }
+
+        /* ფორუმი */
+        .forum-post {
+            background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.08), transparent 60%), var(--white);
+            padding: 20px 20px 18px;
+            border-radius: var(--radius);
+            margin-bottom: 18px;
+            box-shadow: var(--shadow-subtle);
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        .post-author {
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.95rem;
+        }
+        .post-author span {
+            font-weight: 500;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+        .comment-item {
+            background: var(--primary-soft);
+            padding: 9px 10px;
+            margin-bottom: 6px;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+        }
+        .comment-form {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        /* ფლეშქარდები (ფრაზეოლოგიზმები) */
+        .flashcard-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+            gap: 20px;
+        }
+        .flashcard {
+            background: transparent;
+            height: 160px;
+            perspective: 1100px;
+            cursor: pointer;
+        }
+        .flashcard-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .flashcard.flipped .flashcard-inner {
+            transform: rotateY(180deg);
+        }
+        .flashcard-front,
+        .flashcard-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-subtle);
+            border: 1px solid var(--border);
+            font-weight: bold;
+            font-family: "Georgia", "Sylfaen", serif;
+        }
+        .flashcard-front {
+            background-color: var(--white);
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+        .flashcard-back {
+            background: radial-gradient(circle at top, var(--primary-light), var(--primary));
+            color: white;
+            transform: rotateY(180deg);
+            font-size: 0.98rem;
+        }
+        .flashcard-flip-btn {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(0,0,0,0.2);
+            color: inherit;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+        }
+        .flashcard-flip-btn:hover {
+            background: rgba(0,0,0,0.35);
+        }
+
+        /* ლექსიკონი */
+        .dict-search {
+            width: 100%;
+            padding: 15px !important;
+            font-size: 1.05rem;
+            border: 2px solid var(--accent) !important;
+            border-radius: 30px !important;
+            margin-bottom: 20px;
+            background: var(--accent-soft);
+        }
+        .dict-item {
+            background: var(--white);
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: var(--radius);
+            border-left: 4px solid var(--primary);
+            box-shadow: var(--shadow-subtle);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .dict-item strong {
+            color: var(--accent);
+            font-size: 1.1rem;
+        }
+
+        /* მოსწავლის სტატისტიკა (გამიფიკაცია) */
+        .student-stats {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            background: linear-gradient(135deg, #1e293b, #4b1647);
+            color: white;
+            padding: 14px 16px;
+            border-radius: var(--radius-pill);
+            margin-bottom: 30px;
+            align-items: center;
+            box-shadow: var(--shadow-soft);
+        }
+        progress {
+            border-radius: 999px;
+            height: 10px;
+            accent-color: var(--accent);
+        }
+        .badge {
+            background: var(--accent);
+            color: #000;
+            padding: 5px 10px;
+            border-radius: 16px;
+            font-weight: bold;
+            font-size: 0.78rem;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.85);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+        .modal-content {
+            background: radial-gradient(circle at top, rgba(244, 180, 26, 0.2), transparent 55%), var(--white);
+            padding: 28px 24px;
+            border-radius: 18px;
+            width: 360px;
+            text-align: center;
+            position: relative;
+            box-shadow: var(--shadow-soft);
+            border: 1px solid var(--border);
+        }
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-main);
+        }
+        .student-only,
+        .teacher-only {
+            display: none;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: linear-gradient(135deg, #166534, #15803d);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: var(--radius-pill);
+            font-weight: 600;
+            box-shadow: var(--shadow-soft);
+            z-index: 3000;
+            opacity: 0;
+            transition: transform 0.35s ease, opacity 0.3s ease;
+        }
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+        .footer {
+            margin-top: 60px;
+            padding: 32px 6%;
+            background: linear-gradient(180deg, transparent 0%, rgba(74, 12, 23, 0.08) 100%);
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+        .footer-logo { font-size: 1rem; color: var(--primary); font-weight: 700; margin-bottom: 6px; }
+        .footer-tagline { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px; }
+        .footer-copy { color: var(--text-muted); font-size: 0.8rem; }
+
+        .quiz-option {
+            display: block;
+            width: 100%;
+            padding: 12px 16px;
+            margin: 8px 0;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            background: var(--white);
+            cursor: pointer;
+            text-align: left;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+        .quiz-option:hover { border-color: var(--accent); background: var(--accent-soft); }
+        .quiz-option.correct { border-color: #22c55e; background: rgba(34, 197, 94, 0.15); }
+        .quiz-option.wrong { border-color: #ef4444; background: rgba(239, 68, 68, 0.1); opacity: 0.7; }
+        @media (max-width: 768px) {
+            nav { padding-inline: 4%; }
+            section { padding-inline: 4%; }
+            .logo { margin-bottom: 6px; }
+            .logo-title { font-size: 1.1rem; }
+            .logo-tagline { font-size: 0.75rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="modal-overlay" id="authModal">
+        <div class="modal-content" id="loginForm">
+            <span class="close-modal" onclick="closeAuth()">&times;</span>
+            <div style="margin-bottom: 16px;"><i class="fa-solid fa-right-to-bracket" style="font-size: 2rem; color: var(--accent);"></i></div>
+            <h2 style="color: var(--accent); margin-bottom: 20px;">შესვლა</h2>
+            <input type="text" id="loginUser" placeholder="სახელი (მაგ: ნიკა)">
+            <input type="password" id="loginPass" placeholder="პაროლი">
+            <button class="btn btn-accent" onclick="login()">სისტემაში შესვლა</button>
+            <p style="margin-top: 15px; font-size: 0.9rem;">არ გაქვთ ანგარიში? <a href="#" style="color: var(--accent);" onclick="toggleAuthMode('register')">დარეგისტრირდით</a></p>
+        </div>
+        <div class="modal-content" id="registerForm" style="display:none;">
+            <span class="close-modal" onclick="closeAuth()">&times;</span>
+            <div style="margin-bottom: 16px;"><i class="fa-solid fa-user-plus" style="font-size: 2rem; color: var(--accent);"></i></div>
+            <h2 style="color: var(--accent); margin-bottom: 20px;">რეგისტრაცია</h2>
+            <input type="text" id="regUser" placeholder="სასურველი სახელი">
+            <input type="password" id="regPass" placeholder="სასურველი პაროლი">
+            <button class="btn btn-accent" onclick="register()">ანგარიშის შექმნა</button>
+            <p style="margin-top: 15px; font-size: 0.9rem;"><a href="#" style="color: var(--accent);" onclick="toggleAuthMode('login')">უკან დაბრუნება</a></p>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="quizEditorModal">
+        <div class="modal-content" style="width: 480px; max-height: 90vh; overflow-y: auto;">
+            <span class="close-modal" onclick="closeQuizEditor()">&times;</span>
+            <h2 style="color: var(--accent); margin-bottom: 16px;">ახალი ქვიზი</h2>
+            <input type="text" id="quizTitle" placeholder="ქვიზის სათაური...">
+            <input type="text" id="quizQuestion" placeholder="კითხვა...">
+            <input type="text" id="quizOpt1" placeholder="პასუხი 1">
+            <input type="text" id="quizOpt2" placeholder="პასუხი 2">
+            <input type="text" id="quizOpt3" placeholder="პასუხი 3 (არჩევითი)">
+            <input type="text" id="quizOpt4" placeholder="პასუხი 4 (არჩევითი)">
+            <label style="display:block; margin-top:10px;">სწორი პასუხი: <select id="quizCorrect"><option value="0">პასუხი 1</option><option value="1">პასუხი 2</option><option value="2">პასუხი 3</option><option value="3">პასუხი 4</option></select></label>
+            <button class="btn btn-accent" style="margin-top:16px;" onclick="saveQuiz()">ქვიზის დამატება</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="quizTakeModal">
+        <div class="modal-content" style="width: 520px;">
+            <span class="close-modal" onclick="closeQuizTake()">&times;</span>
+            <h2 id="quizTakeTitle" style="color: var(--primary); margin-bottom: 12px;"></h2>
+            <p id="quizTakeProgress" style="color: var(--text-muted); font-size: 0.9rem;"></p>
+            <p id="quizTakeQuestion" style="font-size: 1.1rem; font-weight: 600; margin: 16px 0;"></p>
+            <p id="quizAnswerFeedback" style="display:none; margin: 8px 0 12px; font-weight: 700;"></p>
+            <div id="quizTakeOptions"></div>
+            <button class="btn" id="quizNextBtn" style="display:none; margin-top: 12px;" onclick="quizNext()">შემდეგი</button>
+            <div id="quizTakeResult" style="display:none; text-align: center; padding: 20px;">
+                <h3 style="color: var(--accent);">შედეგი</h3>
+                <p id="quizScoreText"></p>
+            </div>
+        </div>
+    </div>
+
+    <nav>
+        <a class="logo" href="#" onclick="switchTab('home'); return false;" aria-label="მთავარი">
+            <div class="logo-mark"><i class="fa-solid fa-book-open"></i></div>
+            <div class="logo-text">
+                <span class="logo-title">გონიერსა</span>
+                <span class="logo-tagline">მწვრთნელი უყვარს</span>
+            </div>
+        </a>
+        <div class="nav-links">
+            <button class="nav-tab active" data-tab="home" onclick="switchTab('home')">მთავარი</button>
+            <button class="nav-tab" data-tab="materials" onclick="switchTab('materials')">მასალები</button>
+            <button class="nav-tab" data-tab="media" onclick="switchTab('media')">მედია</button>
+            <button class="nav-tab" data-tab="dictionary" onclick="switchTab('dictionary')">ლექსიკონი</button>
+            <button class="nav-tab" data-tab="phrases" onclick="switchTab('phrases')">ფრაზეოლოგიზმები</button>
+            <button class="nav-tab" data-tab="assignments" onclick="switchTab('assignments')">დავალებები</button>
+            <button class="nav-tab" data-tab="editTasks" onclick="switchTab('editTasks')">რედაქტირება</button>
+            <button class="nav-tab" data-tab="forum" onclick="switchTab('forum')">ფორუმი</button>
+            <button class="nav-tab" data-tab="quizzes" onclick="switchTab('quizzes')">ქვიზები</button>
+            <button class="nav-tab student-only" style="display:none;" data-tab="profile" onclick="switchTab('profile')">პროფილი</button>
+            <button class="nav-tab" data-tab="notifications" onclick="switchTab('notifications')"><i class="fa-solid fa-bell"></i> შეტყობინებები <span id="notifBadge" style="display:none; background:#ef4444; color:#fff; border-radius:999px; padding:1px 7px; font-size:0.75rem;">0</span></button>
+            <button class="nav-tab teacher-only" style="display:none;" data-tab="teacherPanel" onclick="switchTab('teacherPanel')"><i class="fa-solid fa-gauge-high"></i> პულტი</button>
+            <button class="auth-btn" id="authBtn" onclick="openAuth()">შესვლა</button>
+            <button class="theme-btn" onclick="toggleTheme()"><i class="fa-solid fa-moon" id="themeIcon"></i></button>
+        </div>
+    </nav>
+
+    <div id="app-content">
+        
+        <section id="home" class="active">
+            <div class="student-only student-stats">
+                <div>
+                    <i class="fa-solid fa-star" style="color: gold;"></i>
+                    ქულები: <strong id="statPoints">0</strong> &nbsp;|&nbsp; დონე: <strong id="statLevel">სტუმარი</strong>
+                </div>
+                <div>
+                    <i class="fa-solid fa-award" style="color: var(--accent);"></i>
+                    ბეჯები: <span id="statBadges" class="badge"><i class="fa-solid fa-feather"></i> ჯერ არ გაქვს ბეჯები</span>
+                </div>
+            </div>
+
+            <div class="section-header">
+                <h2 class="editable-text">კეთილი იყოს თქვენი მობრძანება</h2>
+                <p class="editable-text">ქართული ენისა და ლიტერატურის ინტერაქტიული პლატფორმა</p>
+            </div>
+            <div class="admin-toolbar"><button class="btn-save" onclick="saveSite()"><i class="fa-solid fa-floppy-disk"></i> ცვლილებების შენახვა</button></div>
+            
+            <div class="hero-box">
+                <div class="hero-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+                <h3 class="editable-text hero-title">ისწავლე, გაიაზრე, შექმენი!</h3>
+                <p class="editable-text hero-desc">აღმოაჩინე ახალი სიტყვები, მოუსმინე ლექსებს და შეასრულე დავალებები.</p>
+            </div>
+        </section>
+
+        <section id="phrases">
+            <div class="section-header">
+                <h2 class="editable-text">ფრაზეოლოგიზმები</h2>
+                <p class="editable-text">დააკლიკეთ ბარათს მნიშვნელობის გასაგებად</p>
+            </div>
+            <div class="admin-toolbar">
+                <button class="btn-add" onclick="addFlashcard()"><i class="fa-solid fa-plus"></i> ბარათის დამატება</button>
+                <button class="btn-save" onclick="saveSite()">შენახვა</button>
+            </div>
+            <div class="flashcard-container" id="phraseGrid">
+                <div class="flashcard">
+                    <button class="btn-delete" onclick="event.stopPropagation(); this.parentElement.remove(); saveSite();"><i class="fa-solid fa-trash"></i></button>
+                    <div class="flashcard-inner">
+                        <div class="flashcard-front editable-text" contenteditable="false" onclick="editCardText(this, event, 'ფრაზა');">კოვზი ნაცარში ჩაუვარდა<button class="flashcard-flip-btn" contenteditable="false" onclick="event.stopPropagation(); this.closest('.flashcard').classList.toggle('flipped');" title="შემობრუნება"><i class="fa-solid fa-rotate"></i></button></div>
+                        <div class="flashcard-back editable-text" contenteditable="false" onclick="editCardText(this, event, 'განმარტება');">იმედი გაუცრუვდა, მიზანს ვერ მიაღწია.<button class="flashcard-flip-btn" contenteditable="false" onclick="event.stopPropagation(); this.closest('.flashcard').classList.toggle('flipped');" title="შემობრუნება"><i class="fa-solid fa-rotate"></i></button></div>
+                    </div>
+                </div>
+                <div class="flashcard">
+                    <button class="btn-delete" onclick="event.stopPropagation(); this.parentElement.remove(); saveSite();"><i class="fa-solid fa-trash"></i></button>
+                    <div class="flashcard-inner">
+                        <div class="flashcard-front editable-text" contenteditable="false" onclick="editCardText(this, event, 'ფრაზა');">თვალებზე რული არ მიჰკარებია<button class="flashcard-flip-btn" contenteditable="false" onclick="event.stopPropagation(); this.closest('.flashcard').classList.toggle('flipped');" title="შემობრუნება"><i class="fa-solid fa-rotate"></i></button></div>
+                        <div class="flashcard-back editable-text" contenteditable="false" onclick="editCardText(this, event, 'განმარტება');">საერთოდ არ სძინებია, თვალი არ მოუხუჭავს.<button class="flashcard-flip-btn" contenteditable="false" onclick="event.stopPropagation(); this.closest('.flashcard').classList.toggle('flipped');" title="შემობრუნება"><i class="fa-solid fa-rotate"></i></button></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="dictionary">
+            <div class="section-header"><h2 class="editable-text">ინტერაქტიული ლექსიკონი</h2></div>
+            <div class="admin-toolbar">
+                <button class="btn-add" onclick="addDictWord()"><i class="fa-solid fa-plus"></i> სიტყვის დამატება</button>
+                <button class="btn-save" onclick="saveSite()">შენახვა</button>
+            </div>
+            
+            <input type="text" id="dictSearch" class="dict-search" placeholder="🔍 მოძებნეთ ძველი ქართული სიტყვა..." onkeyup="filterDict()">
+            
+            <div id="dictList">
+                <div class="dict-item">
+                    <button class="btn-delete" onclick="this.parentElement.remove(); saveSite();"><i class="fa-solid fa-trash"></i></button>
+                    <strong class="editable-text">ლმობიერი</strong> - <span class="editable-text">შემბრალებელი, გულჩვილი.</span>
+                </div>
+                <div class="dict-item">
+                    <button class="btn-delete" onclick="this.parentElement.remove(); saveSite();"><i class="fa-solid fa-trash"></i></button>
+                    <strong class="editable-text">ნუკრი</strong> - <span class="editable-text">შველის (ან ირმის) ნაშიერი.</span>
+                </div>
+                <div class="dict-item">
+                    <button class="btn-delete" onclick="this.parentElement.remove(); saveSite();"><i class="fa-solid fa-trash"></i></button>
+                    <strong class="editable-text">აბჯარი</strong> - <span class="editable-text">მეომრის დამცავი აღჭურვილობა.</span>
+                </div>
+            </div>
+        </section>
+
+        <section id="media">
+            <div class="section-header"><h2 class="editable-text">აუდიო და ვიდეო ბიბლიოთეკა</h2></div>
+            <div class="admin-toolbar">
+                <button class="btn-add" onclick="addVideoCard()"><i class="fa-brands fa-youtube"></i> ვიდეოს დამატება</button>
+                <button class="btn-save" onclick="saveSite()">შენახვა</button>
+            </div>
+            <div class="grid" id="mediaGrid">
+                <div class="card">
+                    <button class="btn-delete" onclick="this.parentElement.remove(); saveSite();"><i class="fa-solid fa-trash"></i></button>
+                    <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; background: #000; border-radius: 5px; margin-bottom: 15px;">
+                        <iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" src="https://www.youtube.com/embed/g2J072Y_B4s" allowfullscreen></iframe>
+                    </div>
+                    <h3 class="editable-text">ილია ჭავჭავაძე - ბიოგრაფია</h3>
+                </div>
+                <div class="card" style="border-top-color: #2196F3;">
+                    <button class="btn-delete" onclick="this.parentElement.remove(); saveSite();"><i class="fa-solid fa-trash"></i></button>
+                    <i class="fa-solid fa-headphones fa-3x" style="color: #2196F3; margin-bottom: 15px;"></i>
+                    <h3 class="editable-text">გალაკტიონ ტაბიძე - "მერი"</h3>
+                    <p class="editable-text">კითხულობს მურმან ჯინორია.</p>
+                    <audio controls style="width: 100%; margin-top: 15px; outline: none;">
+                        <source src="dummy.mp3" type="audio/mpeg">
+                        თქვენი ბრაუზერი არ უჭერს მხარს აუდიოს.
+                    </audio>
+                </div>
+            </div>
+        </section>
+
+        <section id="materials">
+            <div class="section-header"><h2 class="editable-text">მასალები</h2></div>
+            <div class="admin-toolbar">
+                <button class="btn-add" onclick="addCard('materialsGrid', 'მასალა')"><i class="fa-solid fa-plus"></i> ლინკის დამატება</button>
+                <button class="btn-add" onclick="toggleMaterialUpload()"><i class="fa-solid fa-file-arrow-up"></i> ფაილის ატვირთვა</button>
+                <button class="btn-add" onclick="addMaterialVideo()"><i class="fa-brands fa-youtube"></i> YouTube</button>
+                <button class="btn-save" onclick="saveSite()">შენახვა</button>
+                <div id="materialUploadForm" style="display:none; margin-top:12px; padding-top:12px; border-top:1px dashed rgba(59,130,246,0.5);">
+                    <input type="text" id="materialTitle" placeholder="მასალის სათაური (მაგ: კონსპექტი PDF)">
+                    <input type="file" id="materialFile" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,image/*,video/*,audio/*">
+                    <button class="btn btn-accent" onclick="submitMaterialUpload()">ატვირთვა</button>
+                </div>
+            </div>
+            <div class="grid" id="materialsGrid"><div class="card"><button class="btn-delete" onclick="this.parentElement.remove(); saveSite();"><i class="fa-solid fa-trash"></i></button><h3 class="editable-text">ვეფხისტყაოსნის კონსპექტი</h3><a href="#" class="btn editable-text">ჩამოტვირთვა (PDF)</a></div></div>
+        </section>
+        
+        <section id="assignments">
+            <div class="section-header"><h2 class="editable-text">დავალებები</h2></div>
+            <div class="admin-toolbar"><button class="btn-add" onclick="addAssignmentCard()"><i class="fa-solid fa-plus"></i> ახალი დავალება</button><button class="btn-save" onclick="saveSite()">შენახვა</button></div>
+            <div class="student-only form-box">
+                <h3 style="color: var(--primary);"><i class="fa-solid fa-file-arrow-up"></i> ატვირთე დავალება</h3>
+                <input type="text" id="assignTitle" placeholder="რომელ დავალებას ტვირთავთ?">
+                <input type="file" id="assignFile" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,image/*,video/*,audio/*" title="PDF, Word, PowerPoint, სურათი, ვიდეო, აუდიო და სხვა">
+                <button class="btn btn-accent" onclick="submitAssignment()">გაგზავნა ფორუმზე</button>
+            </div>
+            <div class="grid" id="assignmentsGrid"><div class="card"><button class="btn-delete" onclick="this.parentElement.remove(); saveSite();"><i class="fa-solid fa-trash"></i></button><h3 class="editable-text" onclick="editCardText(this, event, 'სათაური');">ესე: ალუდა ქეთელაური</h3><p class="editable-text" onclick="editCardText(this, event, 'აღწერა');">ვადა: პარასკევი.</p></div></div>
+        </section>
+
+        <section id="editTasks">
+            <div class="section-header">
+                <h2>რედაქტირების დავალებები</h2>
+                <p>მასწავლებელი აქვეყნებს ტექსტს, მოსწავლე ჩაბარებს გასწორებულ ვერსიას</p>
+            </div>
+            <div class="form-box teacher-only" style="display:none;">
+                <h3 style="color: var(--primary);">ახალი რედაქტირების დავალება</h3>
+                <input type="text" id="editTaskTitle" placeholder="სათაური (მაგ: პუნქტუაცია და ორთოგრაფია)">
+                <textarea id="editTaskInstructions" placeholder="ინსტრუქცია (არჩევითი)"></textarea>
+                <textarea id="editTaskSource" placeholder="საწყისი ტექსტი (შეცდომებიანი ტექსტი)"></textarea>
+                <textarea id="editTaskCorrect" placeholder="სწორი ვერსია (მასწავლებლისთვის)"></textarea>
+                <button class="btn btn-accent" onclick="createEditTask()">დავალების გამოქვეყნება</button>
+            </div>
+            <div id="editTasksList" class="grid"></div>
+            <div class="form-box teacher-only" style="display:none; margin-top:16px;">
+                <h3 style="color: var(--primary);">ჩაბარებული გასწორებები</h3>
+                <div id="editSubmissionsList"></div>
+            </div>
+        </section>
+
+        <section id="forum">
+            <div class="section-header"><h2 class="editable-text">დისკუსია და ნაშრომების განხილვა</h2></div>
+            <div class="form-box student-only teacher-only" id="newPostBox">
+                <input type="text" id="forumTitle" placeholder="თემის სათაური...">
+                <textarea id="forumBody" placeholder="დაწერეთ თქვენი მოსაზრება ან კითხვა..."></textarea>
+                <button class="btn" onclick="postToForum()">გამოქვეყნება</button>
+            </div>
+            <div id="forumThread">
+                <div class="forum-post"><button class="btn-delete" onclick="this.remove(); saveSite();"><i class="fa-solid fa-trash"></i></button><div class="post-author">👨‍🏫 მასწავლებელი</div><h3 class="editable-text">მოგესალმებით!</h3><p class="editable-text">ატვირთული დავალებები გამოჩნდება აქ.</p><div class="comments-area"></div><div class="comment-form student-only teacher-only"><input type="text" placeholder="დაწერე კომენტარი..." onkeypress="handleCommentEnter(event, this)"><button class="btn" style="padding: 5px 15px;" onclick="addComment(this)">გაგზავნა</button></div></div>
+            </div>
+        </section>
+
+        <section id="quizzes">
+            <div class="section-header">
+                <h2 class="editable-text">ქვიზები</h2>
+                <p class="editable-text">გამოსცადე შენი ცოდნა</p>
+            </div>
+            <div class="admin-toolbar">
+                <button class="btn-add" onclick="openQuizEditor()"><i class="fa-solid fa-plus"></i> ახალი ქვიზის დამატება</button>
+                <button class="btn-save" onclick="saveSite()">შენახვა</button>
+            </div>
+            <div id="quizList" class="grid"></div>
+        </section>
+
+        <section id="profile" class="student-only">
+            <div class="section-header">
+                <h2>მოსწავლის პროფილი</h2>
+                <p>შენი ქვიზები, საშუალო შედეგი და აქტივობა</p>
+            </div>
+            <div class="grid" id="profileStatsGrid"></div>
+        </section>
+
+        <section id="notifications">
+            <div class="section-header">
+                <h2>შეტყობინებები</h2>
+                <p>ახალი ქვიზები, დავალებები და შეფასებები</p>
+            </div>
+            <div class="admin-toolbar" style="display:block;">
+                <button class="btn" onclick="markAllNotificationsRead()">ყველას წაკითხვულად მონიშვნა</button>
+            </div>
+            <div id="notificationsList"></div>
+        </section>
+
+        <section id="teacherPanel" class="teacher-only" style="display:none;">
+            <div class="section-header">
+                <h2 class="editable-text">მასწავლებლის პულტი</h2>
+                <p class="editable-text">დააკვირდი მოსწავლეების აქტივობას, ნაშრომებსა და ქულებს.</p>
+            </div>
+            <div class="form-box teacher-only">
+                <h3 style="color: var(--primary); margin-bottom: 10px;">ატვირთული დავალებები</h3>
+                <input type="text" id="teacherSearch" placeholder="ფილტრი: მოსწავლის სახელი ან სათაური..." onkeyup="filterTeacherAssignments()">
+            </div>
+            <div id="teacherAssignments"></div>
+            <div class="form-box teacher-only" style="margin-top:20px;">
+                <h3 style="color: var(--primary); margin-bottom: 10px;">მოსწავლეების ჟურნალი</h3>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+                    <input type="text" id="journalStudentName" placeholder="მოსწავლის სახელი (მაგ: ნიკა)" style="flex:1; min-width:180px;">
+                    <input type="text" id="journalStudentGroup" placeholder="ჯგუფი (მაგ: 10ა)" style="width:120px;">
+                    <input type="number" id="journalStudentGrade" min="0" max="100" placeholder="ქულა" style="width:90px;">
+                    <input type="text" id="journalStudentNote" placeholder="შეფასება/კომენტარი" style="flex:1; min-width:180px;">
+                    <button class="btn btn-accent" onclick="addStudentManual()">მოსწავლის დამატება</button>
+                </div>
+                <div id="teacherJournal"></div>
+            </div>
+            <div class="form-box teacher-only" style="margin-top:20px;">
+                <h3 style="color: var(--primary); margin-bottom: 10px;">ხელით სამართავი დეტალური ჟურნალი</h3>
+                <div style="display:grid; grid-template-columns: repeat(7, minmax(110px, 1fr)); gap:8px;">
+                    <input type="text" id="manualStudentName" placeholder="მოსწავლე">
+                    <input type="text" id="manualGroupName" placeholder="ჯგუფი">
+                    <input type="number" id="manualAssignments" min="0" placeholder="დავალებები">
+                    <input type="number" id="manualQuizzes" min="0" placeholder="ქვიზები">
+                    <input type="number" id="manualAvgPercent" min="0" max="100" placeholder="საშუალო %">
+                    <input type="number" id="manualScore" min="0" max="100" placeholder="ქულა">
+                    <input type="text" id="manualNote" placeholder="შეფასება/კომენტარი">
+                </div>
+                <button class="btn btn-accent" style="margin-top:10px;" onclick="addManualJournalRow()">სტრიქონის დამატება</button>
+                <div id="manualJournalTable" style="margin-top:12px;"></div>
+            </div>
+        </section>
+
+    </div>
+
+    <footer class="footer">
+        <div class="footer-logo">📚 გონიერსა მწვრთნელი უყვარს</div>
+        <p class="footer-tagline">ქართული ენისა და ლიტერატურის ინტერაქტიული პლატფორმა</p>
+        <p class="footer-copy">© 2025 — ყველა უფლება დაცულია.</p>
+    </footer>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // 1. ბნელი რეჟიმის ლოგიკა
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('goniursa_theme', isDark ? 'dark' : 'light');
+            document.getElementById('themeIcon').className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        }
+
+        // 2. საიტის ჩატვირთვა და გამიფიკაცია
+        let registeredUsers = JSON.parse(localStorage.getItem('goniursa_users')) || [];
+        let currentUser = 'სტუმარი'; let isAdmin = false;
+        let progressData = JSON.parse(localStorage.getItem('goniursa_progress') || '{}');
+
+        function getCurrentKey() {
+            if (isAdmin) return 'teacher';
+            if (!currentUser || currentUser === 'სტუმარი') return null;
+            return currentUser.replace('👤 ', '');
+        }
+
+        function ensureProgressRecord() {
+            const key = getCurrentKey();
+            if (!key) return null;
+            if (!progressData[key]) {
+                progressData[key] = { points: 0, badges: [] };
+            }
+            return key;
+        }
+
+        function saveProgress() {
+            localStorage.setItem('goniursa_progress', JSON.stringify(progressData));
+        }
+
+        function computeLevel(points) {
+            if (points >= 200) return 'ოსტატი';
+            if (points >= 120) return 'მცოდნე მკითხველი';
+            if (points >= 60) return 'აქტიური მოსწავლე';
+            if (points >= 20) return 'საწყისი მკითხველი';
+            return 'სტუმარი';
+        }
+
+        function updateBadgesFor(key) {
+            const rec = progressData[key];
+            if (!rec) return;
+            const badges = new Set(rec.badges || []);
+            if (rec.points >= 30) badges.add('აქტიური მკითხველი');
+            if (rec.points >= 80) badges.add('ფრაზეოლოგიის მეგობარი');
+            if (rec.points >= 150) badges.add('გონიერი ავტორი');
+            rec.badges = Array.from(badges);
+        }
+
+        function awardPoints(reason, amount) {
+            const key = ensureProgressRecord();
+            if (!key || amount <= 0) return;
+            progressData[key].points += amount;
+            updateBadgesFor(key);
+            saveProgress();
+            updateProgressUI();
+            console.log('ქულა მიენიჭა', reason, amount);
+        }
+
+        function updateProgressUI() {
+            const key = getCurrentKey();
+            const statsEl = document.querySelector('.student-stats');
+            if (!statsEl) return;
+            if (!key || !progressData[key]) {
+                statsEl.style.display = 'none';
+                return;
+            }
+            const rec = progressData[key];
+            const points = rec.points || 0;
+            const level = computeLevel(points);
+            const pointsSpan = document.getElementById('statPoints');
+            const levelSpan = document.getElementById('statLevel');
+            const badgesSpan = document.getElementById('statBadges');
+            if (pointsSpan) pointsSpan.textContent = points;
+            if (levelSpan) levelSpan.textContent = level;
+            if (badgesSpan) {
+                if (rec.badges && rec.badges.length) {
+                    badgesSpan.textContent = rec.badges.join(' • ');
+                } else {
+                    badgesSpan.innerHTML = '<i class="fa-solid fa-feather"></i> ჯერ არ გაქვს ბეჯები';
+                }
+            }
+            statsEl.style.display = 'flex';
+        }
+
+        window.onload = function() {
+            // თემის აღდგენა
+            if(localStorage.getItem('goniursa_theme') === 'dark') { toggleTheme(); }
+            
+            // კონტენტის აღდგენა (v4)
+            const savedData = localStorage.getItem('goniursa_site_v6');
+            if(savedData) document.getElementById('app-content').innerHTML = savedData;
+            toggleAdminUI(false); toggleStudentUI(false);
+            updateProgressUI();
+            restoreSession();
+            if (document.querySelector('#teacherAssignments')) refreshTeacherAssignments();
+            loadQuizzes().then(renderQuizList);
+            loadMaterialsFromServer();
+            loadNotifications();
+            renderProfileStats();
+            refreshTeacherJournal();
+            loadManualJournal();
+            loadEditTasks();
+            loadEditSubmissions();
+
+            // მცირედი შემოწმება — მუშაობს თუ არა ბექენდი (თუ არა, უბრალოდ ჩაწერს კონსოლში შეცდომას)
+            try {
+                fetch('/api/health')
+                    .then(r => r.ok ? r.json() : null)
+                    .then(data => {
+                        if (data && data.status === 'ok') {
+                            console.log('Backend connected:', data);
+                        }
+                    })
+                    .catch(() => {});
+            } catch(e) {
+                // არაფერი — ფრონტენდი მაინც იმუშავებს მარტო
+            }
+        };
+
+        // 3. ნავიგაცია და ავტორიზაცია
+        function switchTab(tabId) {
+            document.querySelectorAll('section').forEach(sec => sec.classList.remove('active'));
+            document.querySelectorAll('.nav-links button:not(.auth-btn):not(.theme-btn)').forEach(btn => btn.classList.remove('active'));
+            const sec = document.getElementById(tabId);
+            if (sec) sec.classList.add('active');
+            const btn = document.querySelector('.nav-links button[data-tab="' + tabId + '"]');
+            if (btn) btn.classList.add('active');
+            window.scrollTo(0, 0);
+            if (tabId === 'teacherPanel') { refreshTeacherAssignments(); refreshTeacherJournal(); loadManualJournal(); }
+            if (tabId === 'quizzes') renderQuizList();
+            if (tabId === 'notifications') loadNotifications();
+            if (tabId === 'profile') renderProfileStats();
+            if (tabId === 'materials') loadMaterialsFromServer();
+            if (tabId === 'editTasks') { loadEditTasks(); loadEditSubmissions(); }
+        }
+
+        function showToast(msg) {
+            const el = document.getElementById('toast');
+            if (!el) return;
+            el.textContent = msg;
+            el.classList.add('show');
+            setTimeout(function() { el.classList.remove('show'); }, 2200);
+        }
+
+        function escapeHtml(v) {
+            return String(v || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function openAuth() {
+            if(currentUser !== 'სტუმარი') {
+                currentUser = 'სტუმარი'; isAdmin = false;
+                localStorage.removeItem('goniursa_session');
+                document.getElementById('authBtn').innerHTML = "შესვლა";
+                document.body.classList.remove('editing-mode');
+                toggleAdminUI(false); toggleStudentUI(false);
+            } else {
+                document.getElementById('authModal').style.display = 'flex'; toggleAuthMode('login');
+            }
+        }
+        function closeAuth() { document.getElementById('authModal').style.display = 'none'; }
+        function toggleAuthMode(mode) {
+            document.getElementById('loginForm').style.display = mode === 'login' ? 'block' : 'none';
+            document.getElementById('registerForm').style.display = mode === 'register' ? 'block' : 'none';
+        }
+
+        function register() {
+            const user = document.getElementById('regUser').value.trim();
+            const pass = document.getElementById('regPass').value;
+            if(!user || !pass) return alert("შეავსეთ ველები!");
+            if(user.toLowerCase() === 'admin' || registeredUsers.find(u => u.username === user)) return alert("სახელი დაკავებულია!");
+            registeredUsers.push({ username: user, password: pass });
+            localStorage.setItem('goniursa_users', JSON.stringify(registeredUsers));
+            alert("რეგისტრაცია წარმატებულია!"); document.getElementById('regUser').value = ''; toggleAuthMode('login');
+        }
+
+        function login() {
+            const user = document.getElementById('loginUser').value.trim();
+            const pass = document.getElementById('loginPass').value;
+            if(user === 'admin' && pass === '1234') {
+                isAdmin = true; currentUser = '👨‍🏫 მასწავლებელი';
+                document.body.classList.add('editing-mode');
+                toggleAdminUI(true); toggleStudentUI(false);
+                localStorage.setItem('goniursa_session', JSON.stringify({ user: 'admin', isAdmin: true }));
+            } else {
+                const fUser = registeredUsers.find(u => u.username === user && u.password === pass);
+                if(fUser) {
+                    isAdmin = false; currentUser = '👤 ' + fUser.username;
+                    document.body.classList.remove('editing-mode');
+                    toggleAdminUI(false); toggleStudentUI(true);
+                    updateProgressUI();
+                    localStorage.setItem('goniursa_session', JSON.stringify({ user: fUser.username, isAdmin: false }));
+                } else { return alert("არასწორი მონაცემები!"); }
+            }
+            document.getElementById('authBtn').innerHTML = `${currentUser} (გამოსვლა)`; closeAuth();
+        }
+
+        function restoreSession() {
+            try {
+                const s = localStorage.getItem('goniursa_session');
+                if (!s) return;
+                const data = JSON.parse(s);
+                if (data.isAdmin && data.user === 'admin') {
+                    isAdmin = true; currentUser = '👨‍🏫 მასწავლებელი';
+                    document.body.classList.add('editing-mode');
+                    toggleAdminUI(true); toggleStudentUI(false);
+                } else if (data.user && !data.isAdmin) {
+                    const f = registeredUsers.find(u => u.username === data.user);
+                    if (f) {
+                        isAdmin = false; currentUser = '👤 ' + f.username;
+                        toggleAdminUI(false); toggleStudentUI(true);
+                        updateProgressUI();
+                    } else return;
+                } else return;
+                document.getElementById('authBtn').innerHTML = `${currentUser} (გამოსვლა)`;
+            } catch(e) {}
+        }
+
+        // 4. ადმინის და მოსწავლის UI
+        function toggleAdminUI(show) {
+            document.querySelectorAll('.admin-toolbar, .btn-delete, .teacher-only, .upload-panel').forEach(el => el.style.display = show ? 'block' : 'none');
+            document.querySelectorAll('.editable-text').forEach(el => {
+                el.setAttribute('contenteditable', show ? 'true' : 'false');
+            });
+        }
+        function toggleStudentUI(show) {
+            document.querySelectorAll('.student-only').forEach(el => el.style.display = show ? 'block' : 'none');
+            if (show) updateProgressUI();
+        }
+
+        function saveSite() {
+            const tA = isAdmin; const tS = (currentUser !== 'სტუმარი' && !isAdmin);
+            toggleAdminUI(false); toggleStudentUI(false);
+            document.querySelectorAll('input[type="file"]').forEach(i => i.value = '');
+            localStorage.setItem('goniursa_site_v6', document.getElementById('app-content').innerHTML);
+            if(tA) toggleAdminUI(true); if(tS) toggleStudentUI(true);
+            showToast('ცვლილებები შენახულია ✓');
+        }
+
+        function refreshTeacherAssignments() {
+            const container = document.getElementById('teacherAssignments');
+            const thread = document.getElementById('forumThread');
+            if (!container || !thread) return;
+            const posts = thread.querySelectorAll('.forum-post');
+            const list = [];
+            posts.forEach(function(p) {
+                const authorEl = p.querySelector('.post-author');
+                const titleEl = p.querySelector('h3');
+                const linkEl = p.querySelector('a[download]');
+                const author = authorEl ? authorEl.textContent.trim() : '';
+                const title = titleEl ? titleEl.textContent.trim() : '';
+                const isAssignment = author.indexOf('(დავალება)') !== -1;
+                if (isAssignment && (author || title)) {
+                    list.push({ author: author.replace(/\s*\(დავალება\)\s*/, '').trim(), title: title, link: linkEl ? linkEl.getAttribute('href') : null, node: p });
+                }
+            });
+            window._teacherAssignmentsList = list;
+            filterTeacherAssignments();
+        }
+
+        function filterTeacherAssignments() {
+            const list = window._teacherAssignmentsList || [];
+            const container = document.getElementById('teacherAssignments');
+            if (!container) return;
+            const q = (document.getElementById('teacherSearch') || {}).value || '';
+            const ql = q.toLowerCase();
+            const filtered = ql ? list.filter(function(x) {
+                return (x.author && x.author.toLowerCase().indexOf(ql) !== -1) || (x.title && x.title.toLowerCase().indexOf(ql) !== -1);
+            }) : list;
+            if (filtered.length === 0) {
+                container.innerHTML = '<p class="form-box" style="color: var(--text-muted);">ატვირთული დავალებები არ მოიძებნა.</p>';
+                return;
+            }
+            container.innerHTML = filtered.map(function(x) {
+                const linkHtml = x.link ? '<a href="' + x.link + '" download class="btn" style="margin-top:8px;"><i class="fa-solid fa-file-arrow-down"></i> ჩამოტვირთვა</a>' : '';
+                return '<div class="card" style="margin-bottom:16px;"><div class="post-author">' + (x.author || '—') + '</div><h3>' + (x.title || '—') + '</h3>' + linkHtml + '</div>';
+            }).join('');
+        }
+
+        async function refreshTeacherJournal() {
+            const container = document.getElementById('teacherJournal');
+            if (!container) return;
+            try {
+                const [aResp, qResp, gResp, sgResp, stResp] = await Promise.all([
+                    fetch('/api/assignments/submissions'),
+                    fetch('/api/quiz-attempts'),
+                    fetch('/api/grades'),
+                    fetch('/api/student-groups'),
+                    fetch('/api/students')
+                ]);
+                const assignments = aResp.ok ? await aResp.json() : [];
+                const attempts = qResp.ok ? await qResp.json() : [];
+                const grades = gResp.ok ? await gResp.json() : [];
+                const groups = sgResp.ok ? await sgResp.json() : [];
+                const students = stResp.ok ? await stResp.json() : [];
+                const map = {};
+                students.forEach(function(s) {
+                    const user = (s.name || '').trim();
+                    if (!user) return;
+                    if (!map[user]) map[user] = { assignments: 0, quizzes: 0, avg: 0 };
+                });
+                assignments.forEach(function(x) {
+                    const user = (x.author || '').replace('👤 ', '').trim();
+                    if (!user) return;
+                    if (!map[user]) map[user] = { assignments: 0, quizzes: 0, avg: 0 };
+                    map[user].assignments += 1;
+                });
+                attempts.forEach(function(x) {
+                    const user = (x.user || '').replace('👤 ', '').trim();
+                    if (!user) return;
+                    if (!map[user]) map[user] = { assignments: 0, quizzes: 0, avg: 0 };
+                    map[user].quizzes += 1;
+                    const pct = x.total ? (x.score / x.total) * 100 : 0;
+                    map[user].avg += pct;
+                });
+                const users = Object.keys(map);
+                if (!users.length) {
+                    container.innerHTML = '<p class="form-box" style="color: var(--text-muted);">ჟურნალი ჯერ ცარიელია.</p>';
+                    return;
+                }
+                const gradeMap = {};
+                const groupMap = {};
+                grades.forEach(function(g) { gradeMap[g.user] = g; });
+                groups.forEach(function(g) { groupMap[g.user] = g; });
+                const rows = users.map(function(u) {
+                    const r = map[u];
+                    const avg = r.quizzes ? Math.round(r.avg / r.quizzes) : 0;
+                    const gs = gradeMap[u] || {};
+                    const sg = groupMap[u] || {};
+                    const gradeVal = Number(gs.score || 0);
+                    const noteVal = escapeHtml(gs.note || '');
+                    const groupVal = escapeHtml(sg.group || '');
+                    const key = encodeURIComponent(u);
+                    return '<tr><td style="padding:8px; border-bottom:1px solid var(--border);">' + escapeHtml(u) + '</td><td style="padding:8px; border-bottom:1px solid var(--border);"><input type="text" value="' + groupVal + '" placeholder="მაგ: 10ა" style="width:90px;" onchange="saveStudentGroup(decodeURIComponent(\'' + key + '\'), this.value)"></td><td style="padding:8px; border-bottom:1px solid var(--border);">' + r.assignments + '</td><td style="padding:8px; border-bottom:1px solid var(--border);">' + r.quizzes + '</td><td style="padding:8px; border-bottom:1px solid var(--border);">' + avg + '%</td><td style="padding:8px; border-bottom:1px solid var(--border);"><input type="number" min="0" max="100" value="' + gradeVal + '" style="width:80px;" onchange="saveGrade(decodeURIComponent(\'' + key + '\'), this.value, this.parentElement.nextElementSibling.firstElementChild.value)"></td><td style="padding:8px; border-bottom:1px solid var(--border);"><input type="text" value="' + noteVal + '" placeholder="შეფასების კომენტარი" style="width:220px;" onchange="saveGrade(decodeURIComponent(\'' + key + '\'), this.parentElement.previousElementSibling.firstElementChild.value, this.value)"></td><td style="padding:8px; border-bottom:1px solid var(--border);"><button class="btn" style="padding:4px 10px;" onclick="deleteStudentManual(decodeURIComponent(\'' + key + '\'))">წაშლა</button></td></tr>';
+                }).join('');
+                container.innerHTML = '<div style="overflow:auto;"><table style="width:100%; border-collapse:collapse;"><thead><tr><th style="text-align:left; border-bottom:1px solid var(--border); padding:8px;">მოსწავლე</th><th style="text-align:left; border-bottom:1px solid var(--border); padding:8px;">ჯგუფი</th><th style="text-align:left; border-bottom:1px solid var(--border); padding:8px;">დავალებები</th><th style="text-align:left; border-bottom:1px solid var(--border); padding:8px;">ქვიზები</th><th style="text-align:left; border-bottom:1px solid var(--border); padding:8px;">საშუალო</th><th style="text-align:left; border-bottom:1px solid var(--border); padding:8px;">ქულა</th><th style="text-align:left; border-bottom:1px solid var(--border); padding:8px;">შეფასება</th><th style="text-align:left; border-bottom:1px solid var(--border); padding:8px;">ქმედება</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+            } catch (e) {
+                container.innerHTML = '<p class="form-box" style="color:#b91c1c;">ჟურნალის ჩატვირთვა ვერ მოხერხდა.</p>';
+            }
+        }
+
+        function saveGrade(user, score, note) {
+            return fetch('/api/grades', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user, score: Number(score || 0), note: note || '' })
+            }).then(function() { showToast('შეფასება შენახულია ✓'); });
+        }
+
+        function saveStudentGroup(user, group) {
+            return fetch('/api/student-groups', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user, group: group || '' })
+            }).then(function() { showToast('ჯგუფი შენახულია ✓'); });
+        }
+
+        function addStudentManual() {
+            const name = (document.getElementById('journalStudentName') || {}).value || '';
+            const group = (document.getElementById('journalStudentGroup') || {}).value || '';
+            const score = (document.getElementById('journalStudentGrade') || {}).value || '';
+            const note = (document.getElementById('journalStudentNote') || {}).value || '';
+            const n = name.trim();
+            if (!n) { alert('მოსწავლის სახელი აუცილებელია.'); return; }
+            fetch('/api/students', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: n })
+            }).then(function() {
+                if (group.trim()) return saveStudentGroup(n, group.trim());
+            }).then(function() {
+                if (String(score).trim() || note.trim()) return saveGrade(n, score, note);
+            }).finally(function() {
+                if (document.getElementById('journalStudentName')) document.getElementById('journalStudentName').value = '';
+                if (document.getElementById('journalStudentGroup')) document.getElementById('journalStudentGroup').value = '';
+                if (document.getElementById('journalStudentGrade')) document.getElementById('journalStudentGrade').value = '';
+                if (document.getElementById('journalStudentNote')) document.getElementById('journalStudentNote').value = '';
+            refreshTeacherJournal();
+            loadManualJournal();
+                showToast('მოსწავლე დაემატა ჟურნალში ✓');
+            });
+        }
+
+        function deleteStudentManual(name) {
+            if (!confirm('ნამდვილად გსურს მოსწავლის ამოღება ჟურნალიდან?')) return;
+            fetch('/api/students/' + encodeURIComponent(name), { method: 'DELETE' })
+                .then(function() { refreshTeacherJournal(); showToast('მოსწავლე წაიშალა ✓'); });
+        }
+
+        async function loadManualJournal() {
+            const el = document.getElementById('manualJournalTable');
+            if (!el) return;
+            try {
+                const resp = await fetch('/api/manual-journal');
+                const rows = resp.ok ? await resp.json() : [];
+                if (!rows.length) {
+                    el.innerHTML = '<p class="form-box" style="color: var(--text-muted);">ხელით დამატებული ჩანაწერები ჯერ არ არის.</p>';
+                    return;
+                }
+                const tbody = rows.map(function(r) {
+                    return '<tr>' +
+                        '<td style="padding:8px; border-bottom:1px solid var(--border);"><input type="text" value="' + escapeHtml(r.studentName || '') + '" onchange="saveManualJournalRow(' + r.id + ')"></td>' +
+                        '<td style="padding:8px; border-bottom:1px solid var(--border);"><input type="text" value="' + escapeHtml(r.groupName || '') + '" onchange="saveManualJournalRow(' + r.id + ')"></td>' +
+                        '<td style="padding:8px; border-bottom:1px solid var(--border);"><input type="number" min="0" value="' + Number(r.assignments || 0) + '" onchange="saveManualJournalRow(' + r.id + ')"></td>' +
+                        '<td style="padding:8px; border-bottom:1px solid var(--border);"><input type="number" min="0" value="' + Number(r.quizzes || 0) + '" onchange="saveManualJournalRow(' + r.id + ')"></td>' +
+                        '<td style="padding:8px; border-bottom:1px solid var(--border);"><input type="number" min="0" max="100" value="' + Number(r.avgPercent || 0) + '" onchange="saveManualJournalRow(' + r.id + ')"></td>' +
+                        '<td style="padding:8px; border-bottom:1px solid var(--border);"><input type="number" min="0" max="100" value="' + Number(r.score || 0) + '" onchange="saveManualJournalRow(' + r.id + ')"></td>' +
+                        '<td style="padding:8px; border-bottom:1px solid var(--border);"><input type="text" value="' + escapeHtml(r.note || '') + '" onchange="saveManualJournalRow(' + r.id + ')"></td>' +
+                        '<td style="padding:8px; border-bottom:1px solid var(--border);"><button class="btn" style="padding:4px 10px;" onclick="deleteManualJournalRow(' + r.id + ')">წაშლა</button></td>' +
+                        '</tr>';
+                }).join('');
+                el.innerHTML = '<div style="overflow:auto;"><table style="width:100%; border-collapse:collapse;"><thead><tr><th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">მოსწავლე</th><th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">ჯგუფი</th><th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">დავალებები</th><th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">ქვიზები</th><th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">საშუალო %</th><th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">ქულა</th><th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">შეფასება</th><th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">ქმედება</th></tr></thead><tbody id="manualJournalBody">' + tbody + '</tbody></table></div>';
+            } catch (e) {
+                el.innerHTML = '<p class="form-box" style="color:#b91c1c;">ხელით ჟურნალი ვერ ჩაიტვირთა.</p>';
+            }
+        }
+
+        function getManualRowPayloadById(id) {
+            const body = document.getElementById('manualJournalBody');
+            if (!body) return null;
+            const rows = Array.from(body.querySelectorAll('tr'));
+            const row = rows.find(function(tr) {
+                const btn = tr.querySelector('button');
+                return btn && btn.getAttribute('onclick') && btn.getAttribute('onclick').indexOf('(' + id + ')') !== -1;
+            });
+            if (!row) return null;
+            const inputs = row.querySelectorAll('input');
+            return {
+                studentName: inputs[0] ? inputs[0].value : '',
+                groupName: inputs[1] ? inputs[1].value : '',
+                assignments: inputs[2] ? Number(inputs[2].value || 0) : 0,
+                quizzes: inputs[3] ? Number(inputs[3].value || 0) : 0,
+                avgPercent: inputs[4] ? Number(inputs[4].value || 0) : 0,
+                score: inputs[5] ? Number(inputs[5].value || 0) : 0,
+                note: inputs[6] ? inputs[6].value : ''
+            };
+        }
+
+        function addManualJournalRow() {
+            const payload = {
+                studentName: (document.getElementById('manualStudentName') || {}).value || '',
+                groupName: (document.getElementById('manualGroupName') || {}).value || '',
+                assignments: Number(((document.getElementById('manualAssignments') || {}).value) || 0),
+                quizzes: Number(((document.getElementById('manualQuizzes') || {}).value) || 0),
+                avgPercent: Number(((document.getElementById('manualAvgPercent') || {}).value) || 0),
+                score: Number(((document.getElementById('manualScore') || {}).value) || 0),
+                note: (document.getElementById('manualNote') || {}).value || ''
+            };
+            if (!String(payload.studentName).trim()) { alert('მოსწავლის სახელი აუცილებელია.'); return; }
+            fetch('/api/manual-journal', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(function() {
+                ['manualStudentName','manualGroupName','manualAssignments','manualQuizzes','manualAvgPercent','manualScore','manualNote'].forEach(function(id) {
+                    const el = document.getElementById(id); if (el) el.value = '';
+                });
+                showToast('სტრიქონი დაემატა ✓');
+                loadManualJournal();
+            });
+        }
+
+        function saveManualJournalRow(id) {
+            const payload = getManualRowPayloadById(id);
+            if (!payload) return;
+            fetch('/api/manual-journal/' + id, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(function() { showToast('სტრიქონი განახლდა ✓'); });
+        }
+
+        function deleteManualJournalRow(id) {
+            if (!confirm('წავშალო ეს სტრიქონი?')) return;
+            fetch('/api/manual-journal/' + id, { method: 'DELETE' })
+                .then(function() { showToast('სტრიქონი წაიშალა ✓'); loadManualJournal(); });
+        }
+
+        function createEditTask() {
+            const title = (document.getElementById('editTaskTitle') || {}).value || '';
+            const instructions = (document.getElementById('editTaskInstructions') || {}).value || '';
+            const sourceText = (document.getElementById('editTaskSource') || {}).value || '';
+            const correctText = (document.getElementById('editTaskCorrect') || {}).value || '';
+            if (!title.trim() || !sourceText.trim()) {
+                alert('სათაური და საწყისი ტექსტი აუცილებელია.');
+                return;
+            }
+            fetch('/api/edit-tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: title.trim(),
+                    instructions,
+                    sourceText,
+                    correctText,
+                    createdBy: currentUser
+                })
+            }).then(function(r) {
+                if (!r.ok) throw new Error('failed');
+                return r.json();
+            }).then(function(data) {
+                ['editTaskTitle', 'editTaskInstructions', 'editTaskSource', 'editTaskCorrect'].forEach(function(id) {
+                    const el = document.getElementById(id);
+                    if (el) el.value = '';
+                });
+                showToast('რედაქტირების დავალება გამოქვეყნდა ✓');
+                fetch('/api/notifications', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user: 'all', kind: 'editTask', message: 'დაემატა ახალი რედაქტირების დავალება: ' + data.title })
+                }).catch(() => {});
+                loadEditTasks();
+                loadNotifications();
+            }).catch(function() {
+                alert('დავალების გამოქვეყნება ვერ მოხერხდა.');
+            });
+        }
+
+        function deleteEditTask(id) {
+            if (!isAdmin) return;
+            if (!confirm('წავშალო ეს რედაქტირების დავალება?')) return;
+            fetch('/api/edit-tasks/' + id, { method: 'DELETE' })
+                .then(function(r) {
+                    if (!r.ok) throw new Error('failed');
+                    showToast('დავალება წაიშალა ✓');
+                    loadEditTasks();
+                    loadEditSubmissions();
+                })
+                .catch(function() { alert('წაშლა ვერ მოხერხდა.'); });
+        }
+
+        function renderEditTaskCard(t) {
+            const adminDelete = isAdmin ? `<button class="btn-delete" style="display:block;" onclick="deleteEditTask(${t.id})"><i class="fa-solid fa-trash"></i></button>` : '';
+            const studentForm = !isAdmin && currentUser !== 'სტუმარი'
+                ? `<label style="display:block; margin-bottom:6px; font-weight:600;">შენი გასწორებული ვერსია:</label><textarea id="editAnswer_${t.id}" placeholder="აქ ჩაწერე გასწორებული ვერსია..."></textarea><button class="btn btn-accent" onclick="submitEditSolution(${t.id})">ჩაბარება</button>`
+                : (isAdmin ? `<p style="color: var(--text-muted); margin-top:8px;">მოსწავლის ჩაბარების ველი მოსწავლის ანგარიშით გამოჩნდება.</p>` : `<p style="color: var(--text-muted); margin-top:8px;">ჩასაბარებლად საჭიროა მოსწავლის ანგარიშით შესვლა.</p>`);
+            const teacherAnswer = isAdmin && t.correctText ? `<div style="margin-top:10px; background:#dcfce7; border:1px solid #86efac; border-radius:8px; padding:10px;"><strong>სწორი ვერსია:</strong><div style="white-space:pre-wrap; margin-top:6px;">${escapeHtml(t.correctText)}</div></div>` : '';
+            return `<div class="card">${adminDelete}<h3>${escapeHtml(t.title)}</h3>${t.instructions ? `<p style="color: var(--text-muted);">${escapeHtml(t.instructions)}</p>` : ''}<div style="margin-top:10px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:10px;"><strong>საწყისი ტექსტი:</strong><div style="white-space:pre-wrap; margin-top:6px;">${escapeHtml(t.sourceText)}</div></div>${teacherAnswer}<div style="margin-top:10px;">${studentForm}</div></div>`;
+        }
+
+        function loadEditTasks() {
+            const list = document.getElementById('editTasksList');
+            if (!list) return;
+            fetch('/api/edit-tasks')
+                .then(function(r) { return r.ok ? r.json() : []; })
+                .then(function(tasks) {
+                    if (!tasks.length) {
+                        list.innerHTML = '<p class="form-box" style="color: var(--text-muted); grid-column: 1/-1;">რედაქტირების დავალებები ჯერ არ არის.</p>';
+                        return;
+                    }
+                    list.innerHTML = tasks.map(renderEditTaskCard).join('');
+                })
+                .catch(function() {
+                    list.innerHTML = '<p class="form-box" style="color:#b91c1c; grid-column: 1/-1;">დავალებები ვერ ჩაიტვირთა.</p>';
+                });
+        }
+
+        function submitEditSolution(taskId) {
+            const input = document.getElementById('editAnswer_' + taskId);
+            const text = input ? input.value : '';
+            if (!text || !text.trim()) {
+                alert('ჩაწერე გასწორებული ტექსტი.');
+                return;
+            }
+            fetch('/api/edit-submissions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    taskId,
+                    student: currentUser.replace('👤 ', ''),
+                    text
+                })
+            }).then(function(r) {
+                if (!r.ok) throw new Error('failed');
+                if (input) input.value = '';
+                showToast('შენი ვერსია ჩაიბარა ✓');
+                loadEditSubmissions();
+                fetch('/api/notifications', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user: 'teacher', kind: 'editSubmission', message: currentUser + ' ჩააბარა რედაქტირების დავალება' })
+                }).catch(() => {});
+            }).catch(function() {
+                alert('ჩაბარება ვერ მოხერხდა.');
+            });
+        }
+
+        function reviewEditSubmission(id) {
+            const scoreEl = document.getElementById('editScore_' + id);
+            const noteEl = document.getElementById('editNote_' + id);
+            const score = scoreEl ? Number(scoreEl.value || 0) : 0;
+            const teacherNote = noteEl ? noteEl.value : '';
+            fetch('/api/edit-submissions/' + id + '/review', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ teacherStatus: 'checked', teacherNote, score })
+            }).then(function(r) {
+                if (!r.ok) throw new Error('failed');
+                showToast('შეფასება შენახულია ✓');
+                loadEditSubmissions();
+            }).catch(function() {
+                alert('შეფასების შენახვა ვერ მოხერხდა.');
+            });
+        }
+
+        function loadEditSubmissions() {
+            const wrap = document.getElementById('editSubmissionsList');
+            if (!wrap || !isAdmin) return;
+            Promise.all([fetch('/api/edit-submissions'), fetch('/api/edit-tasks')])
+                .then(function(res) { return Promise.all(res.map(function(r) { return r.ok ? r.json() : []; })); })
+                .then(function(all) {
+                    const submissions = all[0] || [];
+                    const tasks = all[1] || [];
+                    const map = {};
+                    tasks.forEach(function(t) { map[t.id] = t; });
+                    if (!submissions.length) {
+                        wrap.innerHTML = '<p class="form-box" style="color: var(--text-muted);">ჩაბარებები ჯერ არ არის.</p>';
+                        return;
+                    }
+                    wrap.innerHTML = submissions.slice().reverse().map(function(s) {
+                        const t = map[s.taskId] || {};
+                        const auto = s.autoStatus === 'correct' ? 'auto: სწორია' : (s.autoStatus === 'incorrect' ? 'auto: არასწორია' : 'auto: შეუმოწმებელია');
+                        return `<div class="card" style="margin-bottom:12px;"><div class="post-author">${escapeHtml(s.student)} • ${escapeHtml(t.title || 'დავალება #' + s.taskId)}</div><p style="margin:6px 0; color:var(--text-muted);">${auto}</p><div style="white-space:pre-wrap; background:#f8fafc; border:1px solid var(--border); border-radius:8px; padding:8px;">${escapeHtml(s.text)}</div><div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;"><input id="editScore_${s.id}" type="number" min="0" max="100" value="${Number(s.score || 0)}" style="width:90px;" placeholder="ქულა"><input id="editNote_${s.id}" type="text" value="${escapeHtml(s.teacherNote || '')}" placeholder="კომენტარი" style="flex:1; min-width:200px;"><button class="btn" onclick="reviewEditSubmission(${s.id})">შენახვა</button></div></div>`;
+                    }).join('');
+                })
+                .catch(function() {
+                    wrap.innerHTML = '<p class="form-box" style="color:#b91c1c;">ჩაბარებები ვერ ჩაიტვირთა.</p>';
+                });
+        }
+
+        function renderProfileStats() {
+            const el = document.getElementById('profileStatsGrid');
+            if (!el || isAdmin || currentUser === 'სტუმარი') return;
+            fetch('/api/quiz-attempts')
+                .then(r => r.ok ? r.json() : [])
+                .then(function(attempts) {
+                    const mine = attempts.filter(function(a) { return (a.user || '').replace('👤 ', '') === currentUser.replace('👤 ', ''); });
+                    const total = mine.length;
+                    const avg = total ? Math.round(mine.reduce((s, x) => s + (x.total ? (x.score / x.total) * 100 : 0), 0) / total) : 0;
+                    const last = total ? new Date(mine[mine.length - 1].createdAt).toLocaleString() : '—';
+                    el.innerHTML = '<div class="card"><h3>ჩაბარებული ქვიზები</h3><p style="font-size:1.5rem; font-weight:700;">' + total + '</p></div><div class="card"><h3>საშუალო შედეგი</h3><p style="font-size:1.5rem; font-weight:700;">' + avg + '%</p></div><div class="card"><h3>ბოლო აქტივობა</h3><p>' + escapeHtml(last) + '</p></div>';
+                })
+                .catch(function() {
+                    el.innerHTML = '<p class="form-box" style="color: var(--text-muted);">პროფილის სტატისტიკა მიუწვდომელია.</p>';
+                });
+        }
+
+        // 5. ახალი ფუნქციები (ლექსიკონი და ფლეშქარდები)
+        function filterDict() {
+            const val = document.getElementById('dictSearch').value.toLowerCase();
+            document.querySelectorAll('.dict-item').forEach(item => {
+                const text = item.innerText.toLowerCase();
+                item.style.display = text.includes(val) ? 'block' : 'none';
+            });
+        }
+
+        function addDictWord() {
+            const word = prompt("ჩაწერეთ სიტყვა:"); const def = prompt("ჩაწერეთ განმარტება:");
+            if(!word || !def) return;
+            const div = document.createElement('div'); div.className = 'dict-item';
+            div.innerHTML = `<button class="btn-delete" style="display:block;" onclick="this.parentElement.remove(); saveSite();"><i class="fa-solid fa-trash"></i></button><strong class="editable-text" contenteditable="true">${word}</strong> - <span class="editable-text" contenteditable="true">${def}</span>`;
+            document.getElementById('dictList').insertBefore(div, document.getElementById('dictList').firstChild); saveSite();
+            awardPoints('dictionary_add', 5);
+        }
+
+        function editCardText(el, event, label) {
+            event.stopPropagation();
+            if (!isAdmin) return;
+            const isLink = el.tagName === 'A';
+            if (isLink) {
+                event.preventDefault();
+                const currentHref = el.getAttribute('href') || '#';
+                const nextHref = prompt((label || 'ლინკი') + ' შეცვლა:', currentHref);
+                if (nextHref === null) return;
+                const safeHref = nextHref.trim() || '#';
+                el.setAttribute('href', safeHref);
+                saveSite();
+                return;
+            }
+            const btn = el.querySelector('.flashcard-flip-btn');
+            const currentText = btn ? (el.childNodes[0] && el.childNodes[0].nodeValue ? el.childNodes[0].nodeValue : '').trim() : (el.textContent || '').trim();
+            const nextText = prompt((label || 'ტექსტი') + ' შეცვლა:', currentText);
+            if (nextText === null) return;
+            if (btn) {
+                if (el.childNodes[0]) el.childNodes[0].nodeValue = nextText;
+            } else {
+                el.textContent = nextText;
+            }
+            saveSite();
+        }
+
+        function addFlashcard() {
+            const grid = document.getElementById('phraseGrid');
+            if (!grid) { alert('ფრაზეოლოგიზმების გრიდი ვერ მოიძებნა.'); return; }
+            const phrase = prompt('ჩაწერე ფრაზეოლოგიზმი:');
+            if (!phrase) return;
+            const meaning = prompt('ჩაწერე მნიშვნელობა:');
+            if (!meaning) return;
+            const card = document.createElement('div');
+            card.className = 'flashcard';
+            card.innerHTML = `<button class="btn-delete" style="display:block;" onclick="event.stopPropagation(); this.parentElement.remove(); saveSite();"><i class="fa-solid fa-trash"></i></button><div class="flashcard-inner"><div class="flashcard-front editable-text" contenteditable="false" onclick="editCardText(this, event, 'ფრაზა');">${phrase}<button class="flashcard-flip-btn" contenteditable="false" onclick="event.stopPropagation(); this.closest('.flashcard').classList.toggle('flipped');" title="შემობრუნება"><i class="fa-solid fa-rotate"></i></button></div><div class="flashcard-back editable-text" contenteditable="false" onclick="editCardText(this, event, 'განმარტება');">${meaning}<button class="flashcard-flip-btn" contenteditable="false" onclick="event.stopPropagation(); this.closest('.flashcard').classList.toggle('flipped');" title="შემობრუნება"><i class="fa-solid fa-rotate"></i></button></div></div>`;
+            grid.insertBefore(card, grid.firstChild); saveSite();
+            awardPoints('phrase_add', 5);
+        }
+
+        function addVideoCard() {
+            const url = prompt("ჩასვით YouTube ვიდეოს ლინკი:"); if(!url) return;
+            let vid = ""; const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/);
+            if(match && match[2].length===11) vid = match[2]; else return alert("არასწორი ლინკი!");
+            const card = document.createElement('div'); card.className = 'card';
+            card.innerHTML = `<button class="btn-delete" style="display:block;" onclick="this.parentElement.remove(); saveSite();"><i class="fa-solid fa-trash"></i></button><div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; background: #000; border-radius: 5px; margin-bottom: 15px;"><iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" src="https://www.youtube.com/embed/${vid}" allowfullscreen></iframe></div><h3 class="editable-text" contenteditable="true">ახალი ვიდეო</h3>`;
+            document.getElementById('mediaGrid').insertBefore(card, document.getElementById('mediaGrid').firstChild); saveSite();
+        }
+
+        // ფორუმი და დავალებები (შემოკლებული გამეორება)
+        function addCard(g, t) {
+            const grid = document.getElementById(g);
+            if (!grid) { alert('გრიდი ვერ მოიძებნა: ' + g); return; }
+            const card = document.createElement('div'); card.className = 'card';
+            card.innerHTML = `<button class="btn-delete" style="display:block;" onclick="this.parentElement.remove(); saveSite();"><i class="fa-solid fa-trash"></i></button><h3 class="editable-text" contenteditable="true">ახალი ${t}</h3><p class="editable-text" contenteditable="true" style="color: var(--text-muted); font-size: 0.9rem;">აღწერა და ვადა</p><a href="#" class="btn editable-text" contenteditable="false" onclick="event.preventDefault();">ლინკი</a>`;
+            grid.insertBefore(card, grid.firstChild); saveSite();
+        }
+
+        function createMaterialCardHtml(item) {
+            const title = escapeHtml(item.title || 'მასალა');
+            const delBtn = (isAdmin && item.id)
+                ? `<button class="btn-delete" style="display:block;" onclick="deleteMaterial(${Number(item.id)});"><i class="fa-solid fa-trash"></i></button>`
+                : '';
+            if (item.type === 'youtube' && item.url) {
+                const match = item.url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/);
+                const vid = match && match[2] && match[2].length === 11 ? match[2] : '';
+                if (vid) {
+                    return `<div class="card">${delBtn}<h3>${title}</h3><div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; background: #000; border-radius: 5px; margin-top: 12px;"><iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" src="https://www.youtube.com/embed/${vid}" allowfullscreen></iframe></div></div>`;
+                }
+            }
+            const fileUrl = item.fileUrl || '#';
+            const ext = (item.originalName || '').split('.').pop().toLowerCase();
+            const isPdf = ext === 'pdf';
+            const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext);
+            const isVideo = ['mp4', 'webm', 'ogg', 'mov', 'mkv'].includes(ext);
+            const isAudio = ['mp3', 'wav', 'ogg', 'm4a'].includes(ext);
+            let preview = '';
+            if (isPdf) preview = `<iframe src="${fileUrl}" style="width:100%; height:220px; border:1px solid var(--border); border-radius:8px; margin-top:10px;"></iframe>`;
+            else if (isImage) preview = `<img src="${fileUrl}" alt="${title}" style="width:100%; max-height:220px; object-fit:contain; border:1px solid var(--border); border-radius:8px; margin-top:10px;">`;
+            else if (isVideo) preview = `<video controls style="width:100%; margin-top:10px; border-radius:8px;"><source src="${fileUrl}"></video>`;
+            else if (isAudio) preview = `<audio controls style="width:100%; margin-top:10px;"><source src="${fileUrl}"></audio>`;
+            return `<div class="card">${delBtn}<h3>${title}</h3>${preview}<a href="${fileUrl}" download target="_blank" class="btn" style="margin-top:10px;"><i class="fa-solid fa-file-arrow-down"></i> ჩამოტვირთვა (${escapeHtml(item.originalName || 'ფაილი')})</a></div>`;
+        }
+
+        async function loadMaterialsFromServer() {
+            const grid = document.getElementById('materialsGrid');
+            if (!grid) return;
+            try {
+                const resp = await fetch('/api/materials');
+                if (!resp.ok) return;
+                const items = await resp.json();
+                if (!Array.isArray(items) || !items.length) {
+                    grid.innerHTML = '<p class="form-box" style="color: var(--text-muted); grid-column: 1/-1;">მასალები ჯერ არ არის.</p>';
+                    return;
+                }
+                grid.innerHTML = items.map(createMaterialCardHtml).join('');
+            } catch (e) {}
+        }
+
+        function deleteMaterial(id) {
+            if (!isAdmin) return;
+            if (!confirm('ნამდვილად გსურს მასალის წაშლა?')) return;
+            fetch('/api/materials/' + id, { method: 'DELETE' })
+                .then(function(r) {
+                    if (!r.ok) throw new Error('delete failed');
+                    loadMaterialsFromServer();
+                    showToast('მასალა წაიშალა ✓');
+                })
+                .catch(function() {
+                    alert('მასალის წაშლა ვერ მოხერხდა.');
+                });
+        }
+
+        function addAssignmentCard() {
+            const title = prompt('დავალების სათაური:');
+            if (!title) return;
+            const desc = prompt('აღწერა / ვადა:', 'ვადა: ');
+            if (desc === null) return;
+            const link = prompt('ლინკი (არასავალდებულო):', '#');
+            const grid = document.getElementById('assignmentsGrid');
+            if (!grid) { alert('დავალებების გრიდი ვერ მოიძებნა.'); return; }
+            const card = document.createElement('div');
+            card.className = 'card';
+            const safeLink = (link && link.trim()) ? link.trim() : '#';
+            card.innerHTML = `<button class="btn-delete" style="display:block;" onclick="this.parentElement.remove(); saveSite();"><i class="fa-solid fa-trash"></i></button><h3 class="editable-text" onclick="editCardText(this, event, 'სათაური');">${title}</h3><p class="editable-text" style="color: var(--text-muted); font-size: 0.9rem;" onclick="editCardText(this, event, 'აღწერა');">${desc}</p><a href="${safeLink}" class="btn editable-text" target="_blank" onclick="editCardText(this, event, 'ლინკი');">ლინკი</a>`;
+            grid.insertBefore(card, grid.firstChild);
+            saveSite();
+        }
+        function toggleMaterialUpload() {
+            const f = document.getElementById('materialUploadForm');
+            f.style.display = f.style.display === 'none' ? 'block' : 'none';
+        }
+        async function submitMaterialUpload() {
+            const title = document.getElementById('materialTitle').value.trim();
+            const fileInput = document.getElementById('materialFile');
+            if (!title || !fileInput.files.length) { alert('შეავსეთ სათაური და აირჩიეთ ფაილი!'); return; }
+            try {
+                const formData = new FormData();
+                formData.append('title', title);
+                formData.append('originalFilename', fileInput.files[0].name);
+                formData.append('file', fileInput.files[0]);
+                const resp = await fetch('/api/materials/upload', { method: 'POST', body: formData });
+                if (!resp.ok) { alert('ატვირთვა ვერ მოხერხდა. გადაამოწმე, რომ ბექენდი გაშვებულია.'); return; }
+                const data = await resp.json();
+                const grid = document.getElementById('materialsGrid');
+                if (grid) {
+                    const card = document.createElement('div');
+                    card.innerHTML = createMaterialCardHtml(data);
+                    grid.insertBefore(card.firstChild, grid.firstChild);
+                }
+                document.getElementById('materialTitle').value = ''; fileInput.value = ''; toggleMaterialUpload();
+                saveSite(); showToast('მასალა ატვირთულია ✓');
+                fetch('/api/notifications', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user: 'all', kind: 'material', message: 'დაემატა ახალი მასალა: ' + data.title })
+                }).catch(() => {});
+                loadNotifications();
+            } catch (e) { console.error(e); alert('შეცდომა ატვირთვისას.'); }
+        }
+        function addMaterialVideo() {
+            const title = prompt('ვიდეოს სათაური:');
+            if (!title) return;
+            const url = prompt('ჩასვით YouTube ვიდეოს ლინკი:');
+            if (!url || !url.trim()) return;
+            let vid = ''; const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/);
+            if (match && match[2].length === 11) vid = match[2]; else { alert('არასწორი YouTube ლინკი!'); return; }
+            fetch('/api/materials/youtube', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, url })
+            }).then(() => {
+                loadMaterialsFromServer();
+                saveSite(); showToast('ვიდეო დამატებულია ✓');
+                fetch('/api/notifications', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user: 'all', kind: 'material', message: 'დაემატა ვიდეო: ' + title })
+                }).catch(() => {});
+                loadNotifications();
+            });
+        }
+        async function submitAssignment() {
+            const title = document.getElementById('assignTitle').value; const fileInput = document.getElementById('assignFile');
+            if(!title || fileInput.files.length===0) return alert("შეავსეთ სათაური და ფაილი!");
+
+            const file = fileInput.files[0];
+
+            // ფაილი აუცილებლად უნდა აიტვირთოს ბექენდზე, რომ ყველას ჰქონდეს გადმოწერის საშუალება
+            try {
+                const formData = new FormData();
+                formData.append('title', title);
+                formData.append('author', currentUser);
+                formData.append('originalFilename', file.name);
+                formData.append('file', file);
+
+                const resp = await fetch('/api/assignments/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!resp.ok) {
+                    alert("ვერ მოხერხდა ფაილის ატვირთვა. გადაამოწმე, რომ სერვერი გაშვებულია (npm start) და თავიდან სცადე.");
+                    return;
+                }
+
+                const data = await resp.json();
+                const fileLabel = data.originalName || file.name;
+                const fileUrl = data.fileUrl;
+
+                const post = document.createElement('div'); post.className = 'forum-post';
+                const fileBlock = `<a href="${fileUrl}" download target="_blank" style="display:inline-block; padding:8px 12px; border-radius:5px; background:#1d4ed8; color:#fff; text-decoration:none;"><i class="fa-solid fa-file-arrow-down"></i> ${fileLabel} — ჩამოტვირთვა</a>`;
+
+                post.innerHTML = `<button class="btn-delete" ${isAdmin?'style="display:block;"':'style="display:none;"'} onclick="this.parentElement.remove(); saveSite();"><i class="fa-solid fa-trash"></i></button><div class="post-author">${currentUser} <span>(დავალება)</span></div><h3 class="editable-text">${title}</h3><div style="background: #e0f2fe; padding:10px; border-radius:5px;">${fileBlock}</div><div class="comments-area"></div><div class="comment-form student-only teacher-only" style="display:flex;"><input type="text" placeholder="კომენტარი..." onkeypress="handleCommentEnter(event, this)"><button class="btn" style="padding: 5px 15px;" onclick="addComment(this)">გაგზავნა</button></div>`;
+                document.getElementById('forumThread').insertBefore(post, document.getElementById('forumThread').firstChild);
+                document.getElementById('assignTitle').value = ''; fileInput.value = ''; saveSite(); switchTab('forum');
+                awardPoints('assignment_upload', 15);
+                fetch('/api/notifications', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user: 'all', kind: 'assignment', message: currentUser + ' ატვირთა დავალება: ' + title })
+                }).catch(() => {});
+                refreshTeacherJournal();
+                loadNotifications();
+            } catch(e) {
+                console.error(e);
+                alert("შეცდომა ფაილის ატვირთვისას. გადაამოწმე, რომ ბექენდი გაშვებულია და ხელახლა სცადე.");
+            }
+        }
+        function postToForum() {
+            const title = document.getElementById('forumTitle').value; const body = document.getElementById('forumBody').value;
+            if(!title || !body) return;
+            const post = document.createElement('div'); post.className = 'forum-post';
+            post.innerHTML = `<button class="btn-delete" ${isAdmin?'style="display:block;"':'style="display:none;"'} onclick="this.parentElement.remove(); saveSite();"><i class="fa-solid fa-trash"></i></button><div class="post-author">${currentUser}</div><h3 class="editable-text">${title}</h3><p class="editable-text">${body}</p><div class="comments-area"></div><div class="comment-form student-only teacher-only" style="display:flex;"><input type="text" placeholder="კომენტარი..." onkeypress="handleCommentEnter(event, this)"><button class="btn" style="padding: 5px 15px;" onclick="addComment(this)">გაგზავნა</button></div>`;
+            document.getElementById('forumThread').insertBefore(post, document.getElementById('forumThread').firstChild);
+            document.getElementById('forumTitle').value = ''; document.getElementById('forumBody').value = ''; saveSite();
+            awardPoints('forum_post', 8);
+        }
+        function addComment(btn) {
+            const input = btn.previousElementSibling; if(!input.value.trim()) return;
+            const c = document.createElement('div'); c.className = 'comment-item';
+            c.innerHTML = `<strong>${currentUser}:</strong> ${input.value}`;
+            btn.parentElement.previousElementSibling.appendChild(c); input.value = ''; saveSite();
+            awardPoints('forum_comment', 3);
+        }
+        function handleCommentEnter(e, i) { if(e.key==='Enter') addComment(i.nextElementSibling); }
+
+        // ქვიზები
+        let quizData = [];
+        let currentQuiz = null; let quizIndex = 0; let quizScore = 0;
+
+        function normalizeQuizShape(q) {
+            if (q && Array.isArray(q.questions) && q.questions.length) return q;
+            return {
+                id: q.id,
+                title: q.title,
+                questions: [{
+                    text: q.question || '',
+                    options: q.options || [],
+                    correctIndex: Number.isInteger(q.correct) ? q.correct : 0
+                }]
+            };
+        }
+
+        async function loadQuizzes() {
+            try {
+                const resp = await fetch('/api/quizzes');
+                if (resp.ok) {
+                    const remote = await resp.json();
+                    if (Array.isArray(remote) && remote.length) {
+                        quizData = remote.map(normalizeQuizShape);
+                        localStorage.setItem('goniursa_quizzes', JSON.stringify(quizData));
+                        return;
+                    }
+                }
+            } catch (e) {}
+            quizData = (JSON.parse(localStorage.getItem('goniursa_quizzes') || '[]') || []).map(normalizeQuizShape);
+        }
+
+        function saveQuizzes() { localStorage.setItem('goniursa_quizzes', JSON.stringify(quizData)); }
+
+        function openQuizEditor() {
+            document.getElementById('quizTitle').value = '';
+            document.getElementById('quizQuestion').value = '';
+            document.getElementById('quizOpt1').value = '';
+            document.getElementById('quizOpt2').value = '';
+            document.getElementById('quizOpt3').value = '';
+            document.getElementById('quizOpt4').value = '';
+            document.getElementById('quizCorrect').value = '0';
+            document.getElementById('quizEditorModal').style.display = 'flex';
+        }
+        function closeQuizEditor() { document.getElementById('quizEditorModal').style.display = 'none'; }
+
+        function saveQuiz() {
+            const title = document.getElementById('quizTitle').value.trim();
+            const q = document.getElementById('quizQuestion').value.trim();
+            const o1 = document.getElementById('quizOpt1').value.trim();
+            const o2 = document.getElementById('quizOpt2').value.trim();
+            const o3 = document.getElementById('quizOpt3').value.trim();
+            const o4 = document.getElementById('quizOpt4').value.trim();
+            const opts = [o1, o2].filter(Boolean);
+            if (o3) opts.push(o3); if (o4) opts.push(o4);
+            if (!title || !q || opts.length < 2) { alert('შეავსეთ სათაური, კითხვა და მინიმუმ 2 პასუხი!'); return; }
+            let correct = parseInt(document.getElementById('quizCorrect').value, 10);
+            if (correct >= opts.length) correct = 0;
+            const id = quizData.length ? Math.max(...quizData.map(x => x.id)) + 1 : 1;
+            const newQuiz = {
+                id,
+                title,
+                questions: [{ text: q, options: opts, correctIndex: correct }]
+            };
+            quizData.push(newQuiz);
+            saveQuizzes();
+            fetch('/api/quizzes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newQuiz)
+            }).catch(() => {});
+            fetch('/api/notifications', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user: 'all', kind: 'quiz', message: 'დაემატა ახალი ქვიზი: ' + title })
+            }).catch(() => {});
+            loadNotifications();
+            closeQuizEditor();
+            renderQuizList();
+            showToast('ქვიზი დამატებულია ✓');
+        }
+
+        function deleteQuiz(id) {
+            quizData = quizData.filter(x => x.id !== id);
+            saveQuizzes();
+            fetch('/api/quizzes/' + id, { method: 'DELETE' }).catch(() => {});
+            renderQuizList();
+        }
+
+        function renderQuizList() {
+            const el = document.getElementById('quizList');
+            if (!el) return;
+            if (quizData.length === 0) {
+                el.innerHTML = '<p class="form-box" style="color: var(--text-muted); grid-column: 1/-1;">ქვიზები ჯერ-ჯერობით არ არის</p>';
+                return;
+            }
+            el.innerHTML = quizData.map(q => {
+                const delBtn = isAdmin ? `<button class="btn-delete" style="display:block;" onclick="deleteQuiz(${q.id}); renderQuizList();"><i class="fa-solid fa-trash"></i></button>` : '';
+                const btn = !isAdmin ? `<button class="btn btn-accent" onclick="startQuiz(${q.id})"><i class="fa-solid fa-play"></i> ქვიზის დაწყება</button>` : '';
+                const firstQ = q.questions && q.questions[0] ? q.questions[0].text : '';
+                return `<div class="card">${delBtn}<h3>${q.title}</h3><p style="color: var(--text-muted); font-size: 0.9rem;">${firstQ}</p>${btn}</div>`;
+            }).join('');
+        }
+
+        function startQuiz(id) {
+            const selected = quizData.find(x => x.id === id);
+            currentQuiz = selected ? normalizeQuizShape(selected) : null;
+            if (!currentQuiz) return;
+            quizIndex = 0; quizScore = 0;
+            document.getElementById('quizTakeTitle').textContent = currentQuiz.title;
+            document.getElementById('quizTakeResult').style.display = 'none';
+            const fb = document.getElementById('quizAnswerFeedback');
+            if (fb) fb.style.display = 'none';
+            showQuizQuestion();
+            document.getElementById('quizTakeModal').style.display = 'flex';
+        }
+
+        function showQuizQuestion() {
+            const q = currentQuiz.questions[quizIndex];
+            document.getElementById('quizTakeProgress').textContent = 'კითხვა ' + (quizIndex + 1) + ' / ' + currentQuiz.questions.length;
+            document.getElementById('quizTakeQuestion').textContent = q.text;
+            const fb = document.getElementById('quizAnswerFeedback');
+            if (fb) fb.style.display = 'none';
+            const optsEl = document.getElementById('quizTakeOptions');
+            optsEl.innerHTML = q.options.map((o, i) => '<button class="quiz-option" data-i="' + i + '" onclick="answerQuiz(' + i + ')">' + o + '</button>').join('');
+            document.getElementById('quizNextBtn').style.display = 'none';
+        }
+
+        function answerQuiz(i) {
+            const q = currentQuiz.questions[quizIndex];
+            const opts = document.querySelectorAll('#quizTakeOptions .quiz-option');
+            opts.forEach((o, idx) => {
+                o.disabled = true;
+                if (idx === q.correctIndex) o.classList.add('correct');
+                else if (idx === i && i !== q.correctIndex) o.classList.add('wrong');
+            });
+            const fb = document.getElementById('quizAnswerFeedback');
+            if (i === q.correctIndex) {
+                quizScore++;
+                if (fb) {
+                    fb.textContent = 'ეს არის ერთი პატარა ნაბიჯი ადამიანისთვის, მაგრამ გიგანტური ნახტომი საქართველოსთვის.';
+                    fb.style.color = '#166534';
+                    fb.style.display = 'block';
+                }
+            } else {
+                if (fb) {
+                    fb.textContent = 'რას სჩადი, ბეჩავო?';
+                    fb.style.color = '#b91c1c';
+                    fb.style.display = 'block';
+                }
+            }
+            document.getElementById('quizNextBtn').style.display = 'block';
+        }
+
+        function quizNext() {
+            quizIndex++;
+            if (quizIndex >= currentQuiz.questions.length) {
+                document.getElementById('quizTakeQuestion').style.display = 'none';
+                document.getElementById('quizTakeProgress').style.display = 'none';
+                document.getElementById('quizTakeOptions').style.display = 'none';
+                document.getElementById('quizAnswerFeedback').style.display = 'none';
+                document.getElementById('quizNextBtn').style.display = 'none';
+                document.getElementById('quizTakeResult').style.display = 'block';
+                document.getElementById('quizScoreText').textContent = quizScore + ' / ' + currentQuiz.questions.length + ' სწორი';
+                awardPoints('quiz', Math.round((quizScore / currentQuiz.questions.length) * 15));
+                fetch('/api/quiz-attempts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        quizId: currentQuiz.id,
+                        user: currentUser,
+                        score: quizScore,
+                        total: currentQuiz.questions.length
+                    })
+                }).then(() => { refreshTeacherJournal(); renderProfileStats(); }).catch(() => {});
+                return;
+            }
+            document.getElementById('quizTakeQuestion').style.display = 'block';
+            document.getElementById('quizTakeProgress').style.display = 'block';
+            document.getElementById('quizTakeOptions').style.display = 'block';
+            showQuizQuestion();
+        }
+
+        function closeQuizTake() {
+            const m = document.getElementById('quizTakeModal');
+            if (m) m.style.display = 'none';
+            const q = document.getElementById('quizTakeQuestion');
+            const p = document.getElementById('quizTakeProgress');
+            const o = document.getElementById('quizTakeOptions');
+            const f = document.getElementById('quizAnswerFeedback');
+            if (q) q.style.display = 'block';
+            if (p) p.style.display = 'block';
+            if (o) o.style.display = 'block';
+            if (f) f.style.display = 'none';
+        }
+
+        async function loadNotifications() {
+            const listEl = document.getElementById('notificationsList');
+            const badge = document.getElementById('notifBadge');
+            if (!listEl && !badge) return;
+            const userKey = isAdmin ? 'teacher' : (currentUser === 'სტუმარი' ? 'all' : currentUser.replace('👤 ', ''));
+            try {
+                const resp = await fetch('/api/notifications?user=' + encodeURIComponent(userKey));
+                const items = resp.ok ? await resp.json() : [];
+                const unread = (items || []).filter(function(x) { return !x.read; }).length;
+                if (badge) {
+                    badge.style.display = unread ? 'inline-block' : 'none';
+                    badge.textContent = unread;
+                }
+                if (!listEl) return;
+                if (!items.length) {
+                    listEl.innerHTML = '<p class="form-box" style="color: var(--text-muted);">შეტყობინებები ჯერ არ არის.</p>';
+                    return;
+                }
+                listEl.innerHTML = items.slice().reverse().map(function(n) {
+                    const dt = n.createdAt ? new Date(n.createdAt).toLocaleString() : '';
+                    const readStyle = n.read ? 'opacity:0.7;' : 'border-left:4px solid #f59e0b;';
+                    const btn = n.read ? '' : '<button class="btn" style="padding:4px 10px;" onclick="markNotificationRead(' + n.id + ')">წავიკითხე</button>';
+                    return '<div class="card" style="margin-bottom:12px; ' + readStyle + '"><div style="display:flex; justify-content:space-between; gap:8px; align-items:center;"><div><strong>' + escapeHtml(n.kind || 'info') + '</strong><p style="margin:6px 0 4px;">' + escapeHtml(n.message) + '</p><small style="color:var(--text-muted);">' + escapeHtml(dt) + '</small></div>' + btn + '</div></div>';
+                }).join('');
+            } catch (e) {}
+        }
+
+        function markNotificationRead(id) {
+            fetch('/api/notifications/' + id + '/read', { method: 'PATCH' })
+                .then(function() { loadNotifications(); });
+        }
+
+        function markAllNotificationsRead() {
+            fetch('/api/notifications')
+                .then(function(r) { return r.ok ? r.json() : []; })
+                .then(function(items) {
+                    return Promise.all((items || []).filter(function(x) { return !x.read; }).map(function(x) {
+                        return fetch('/api/notifications/' + x.id + '/read', { method: 'PATCH' });
+                    }));
+                })
+                .finally(function() { loadNotifications(); });
+        }
+    </script>
+</body>
+</html>
