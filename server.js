@@ -1,8 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs');
 const multer = require('multer');
+const { createClient } = require('@supabase/supabase-js');
 const {
   ensureCollection,
   readCollection,
@@ -15,32 +15,16 @@ const PORT = process.env.PORT || 10000;
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname)));
 
-const staticRoot = path.join(__dirname);
-app.use(express.static(staticRoot));
+// Supabase Storage client
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+);
 
-const uploadsAssignments = path.join(staticRoot, 'uploads', 'assignments');
-const uploadsMaterials = path.join(staticRoot, 'uploads', 'materials');
-fs.mkdirSync(uploadsAssignments, { recursive: true });
-fs.mkdirSync(uploadsMaterials, { recursive: true });
-
-const storageAssignments = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsAssignments),
-  filename: (req, file, cb) => {
-    const safeName = file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_');
-    cb(null, Date.now() + '-' + Math.round(Math.random() * 1e9) + '-' + safeName);
-  }
-});
-const storageMaterials = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsMaterials),
-  filename: (req, file, cb) => {
-    const safeName = file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_');
-    cb(null, Date.now() + '-' + Math.round(Math.random() * 1e9) + '-' + safeName);
-  }
-});
-
-const upload = multer({ storage: storageAssignments });
-const uploadMaterial = multer({ storage: storageMaterials });
+// Multer — store in memory, then upload to Supabase
+const upload = multer({ storage: multer.memoryStorage() });
 
 (async () => {
   await ensureCollection('users');
@@ -64,7 +48,7 @@ const uploadMaterial = multer({ storage: storageMaterials });
 })();
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
-app.get('/', (req, res) => res.sendFile(path.join(staticRoot, 'index.html')));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 // --- AUTH ---
 app.post('/api/register', async (req, res) => {
@@ -87,30 +71,22 @@ app.post('/api/login', async (req, res) => {
   res.json({ role: 'student', username: user.username });
 });
 
-// --- SITE CONTENT (text edits, flashcards, etc) ---
+// --- SITE CONTENT ---
 app.get('/api/site-content', async (req, res) => {
   const items = await readCollection('siteContent');
-  const item = items[0];
-  res.json(item ? item : { content: null });
+  res.json(items[0] ? items[0] : { content: null });
 });
-
 app.post('/api/site-content', async (req, res) => {
   const { content } = req.body || {};
   if (!content) return res.status(400).json({ error: 'content required' });
   const items = await readCollection('siteContent');
-  if (items.length) {
-    items[0].content = content;
-  } else {
-    items.push({ id: 1, content });
-  }
+  if (items.length) { items[0].content = content; } else { items.push({ id: 1, content }); }
   await writeCollection('siteContent', items);
   res.json({ ok: true });
 });
 
 // --- DICTIONARY ---
-app.get('/api/dictionary', async (req, res) => {
-  res.json(await readCollection('dictionary'));
-});
+app.get('/api/dictionary', async (req, res) => res.json(await readCollection('dictionary')));
 app.post('/api/dictionary', async (req, res) => {
   const { word, definition } = req.body || {};
   if (!word || !definition) return res.status(400).json({ error: 'word and definition required' });
@@ -130,10 +106,8 @@ app.delete('/api/dictionary/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
-// --- PHRASES (flashcards) ---
-app.get('/api/phrases', async (req, res) => {
-  res.json(await readCollection('phrases'));
-});
+// --- PHRASES ---
+app.get('/api/phrases', async (req, res) => res.json(await readCollection('phrases')));
 app.post('/api/phrases', async (req, res) => {
   const { phrase, meaning } = req.body || {};
   if (!phrase || !meaning) return res.status(400).json({ error: 'phrase and meaning required' });
@@ -157,11 +131,7 @@ app.delete('/api/phrases/:id', async (req, res) => {
 app.get('/api/forum/posts', async (req, res) => {
   const posts = await readCollection('forumPosts');
   const comments = await readCollection('forumComments');
-  const result = posts.map(p => ({
-    ...p,
-    comments: comments.filter(c => c.postId === p.id)
-  }));
-  res.json(result);
+  res.json(posts.map(p => ({ ...p, comments: comments.filter(c => c.postId === p.id) })));
 });
 app.post('/api/forum/posts', async (req, res) => {
   const { author, title, body } = req.body || {};
@@ -192,26 +162,39 @@ app.post('/api/forum/posts/:id/comments', async (req, res) => {
   res.status(201).json(item);
 });
 
-// --- MATERIALS ---
-app.get('/api/materials', async (req, res) => {
-  res.json(await readCollection('materials'));
-});
-app.post('/api/materials/upload', uploadMaterial.single('file'), async (req, res) => {
+// --- MATERIALS (files go to Supabase Storage) ---
+app.get('/api/materials', async (req, res) => res.json(await readCollection('materials')));
+
+app.post('/api/materials/upload', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'file required' });
     const { title, originalFilename } = req.body || {};
     if (!title) return res.status(400).json({ error: 'title required' });
     const displayName = (originalFilename && originalFilename.trim()) ? originalFilename.trim() : req.file.originalname;
-    const fileUrl = '/' + path.join('uploads', 'materials', req.file.filename).replace(/\\/g, '/');
+    const safeName = Date.now() + '-' + req.file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_');
+    const filePath = 'materials/' + safeName;
+
+    const { error: uploadError } = await supabase.storage
+      .from('uploads')
+      .upload(filePath, req.file.buffer, { contentType: req.file.mimetype });
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('uploads')
+      .getPublicUrl(filePath);
+
     const items = await readCollection('materials');
-    const item = { id: nextId(items), title: title.trim(), type: 'file', originalName: displayName, fileUrl, createdAt: new Date().toISOString() };
+    const item = { id: nextId(items), title: title.trim(), type: 'file', originalName: displayName, fileUrl: publicUrl, createdAt: new Date().toISOString() };
     items.push(item);
     await writeCollection('materials', items);
     res.status(201).json(item);
   } catch (e) {
+    console.error('Upload error:', e);
     res.status(500).json({ error: 'upload failed' });
   }
 });
+
 app.post('/api/materials/youtube', async (req, res) => {
   const { title, url } = req.body || {};
   if (!title || !url) return res.status(400).json({ error: 'title and url required' });
@@ -221,6 +204,7 @@ app.post('/api/materials/youtube', async (req, res) => {
   await writeCollection('materials', items);
   res.status(201).json(item);
 });
+
 app.delete('/api/materials/:id', async (req, res) => {
   const id = parseInt(req.params.id);
   const items = await readCollection('materials');
@@ -231,26 +215,39 @@ app.delete('/api/materials/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
-// --- ASSIGNMENTS ---
-app.get('/api/assignments/submissions', async (req, res) => {
-  res.json(await readCollection('assignmentSubmissions'));
-});
+// --- ASSIGNMENTS (files go to Supabase Storage) ---
+app.get('/api/assignments/submissions', async (req, res) => res.json(await readCollection('assignmentSubmissions')));
+
 app.post('/api/assignments/upload', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'file required' });
     const { title, author, originalFilename } = req.body || {};
     if (!title || !author) return res.status(400).json({ error: 'title and author required' });
     const displayName = (originalFilename && originalFilename.trim()) ? originalFilename.trim() : req.file.originalname;
-    const fileUrl = '/' + path.join('uploads', 'assignments', req.file.filename).replace(/\\/g, '/');
+    const safeName = Date.now() + '-' + req.file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_');
+    const filePath = 'assignments/' + safeName;
+
+    const { error: uploadError } = await supabase.storage
+      .from('uploads')
+      .upload(filePath, req.file.buffer, { contentType: req.file.mimetype });
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('uploads')
+      .getPublicUrl(filePath);
+
     const items = await readCollection('assignmentSubmissions');
-    const item = { id: nextId(items), title, author, originalName: displayName, fileUrl, createdAt: new Date().toISOString() };
+    const item = { id: nextId(items), title, author, originalName: displayName, fileUrl: publicUrl, createdAt: new Date().toISOString() };
     items.push(item);
     await writeCollection('assignmentSubmissions', items);
     res.status(201).json(item);
   } catch (e) {
+    console.error('Assignment upload error:', e);
     res.status(500).json({ error: 'upload failed' });
   }
 });
+
 app.delete('/api/assignments/submissions/:id', async (req, res) => {
   const id = parseInt(req.params.id);
   const items = await readCollection('assignmentSubmissions');
@@ -262,9 +259,7 @@ app.delete('/api/assignments/submissions/:id', async (req, res) => {
 });
 
 // --- QUIZZES ---
-app.get('/api/quizzes', async (req, res) => {
-  res.json(await readCollection('quizzes'));
-});
+app.get('/api/quizzes', async (req, res) => res.json(await readCollection('quizzes')));
 app.post('/api/quizzes', async (req, res) => {
   const { title, questions } = req.body || {};
   if (!title || !questions) return res.status(400).json({ error: 'title and questions required' });
@@ -285,9 +280,7 @@ app.delete('/api/quizzes/:id', async (req, res) => {
 });
 
 // --- QUIZ ATTEMPTS ---
-app.get('/api/quiz-attempts', async (req, res) => {
-  res.json(await readCollection('quizAttempts'));
-});
+app.get('/api/quiz-attempts', async (req, res) => res.json(await readCollection('quizAttempts')));
 app.post('/api/quiz-attempts', async (req, res) => {
   const { quizId, user, score, total } = req.body || {};
   const items = await readCollection('quizAttempts');
@@ -322,9 +315,7 @@ app.patch('/api/notifications/:id/read', async (req, res) => {
 });
 
 // --- STUDENTS ---
-app.get('/api/students', async (req, res) => {
-  res.json(await readCollection('students'));
-});
+app.get('/api/students', async (req, res) => res.json(await readCollection('students')));
 app.post('/api/students', async (req, res) => {
   const { name } = req.body || {};
   if (!name) return res.status(400).json({ error: 'name required' });
@@ -346,45 +337,31 @@ app.delete('/api/students/:name', async (req, res) => {
 });
 
 // --- GRADES ---
-app.get('/api/grades', async (req, res) => {
-  res.json(await readCollection('grades'));
-});
+app.get('/api/grades', async (req, res) => res.json(await readCollection('grades')));
 app.post('/api/grades', async (req, res) => {
   const { user, score, note } = req.body || {};
   if (!user) return res.status(400).json({ error: 'user required' });
   const items = await readCollection('grades');
   const idx = items.findIndex(x => x.user === user);
-  if (idx !== -1) {
-    items[idx] = { ...items[idx], score, note };
-  } else {
-    items.push({ id: nextId(items), user, score, note });
-  }
+  if (idx !== -1) { items[idx] = { ...items[idx], score, note }; } else { items.push({ id: nextId(items), user, score, note }); }
   await writeCollection('grades', items);
   res.json({ ok: true });
 });
 
 // --- STUDENT GROUPS ---
-app.get('/api/student-groups', async (req, res) => {
-  res.json(await readCollection('studentGroups'));
-});
+app.get('/api/student-groups', async (req, res) => res.json(await readCollection('studentGroups')));
 app.post('/api/student-groups', async (req, res) => {
   const { user, group } = req.body || {};
   if (!user) return res.status(400).json({ error: 'user required' });
   const items = await readCollection('studentGroups');
   const idx = items.findIndex(x => x.user === user);
-  if (idx !== -1) {
-    items[idx].group = group;
-  } else {
-    items.push({ id: nextId(items), user, group });
-  }
+  if (idx !== -1) { items[idx].group = group; } else { items.push({ id: nextId(items), user, group }); }
   await writeCollection('studentGroups', items);
   res.json({ ok: true });
 });
 
 // --- MANUAL JOURNAL ---
-app.get('/api/manual-journal', async (req, res) => {
-  res.json(await readCollection('manualJournal'));
-});
+app.get('/api/manual-journal', async (req, res) => res.json(await readCollection('manualJournal')));
 app.post('/api/manual-journal', async (req, res) => {
   const payload = req.body || {};
   if (!payload.studentName) return res.status(400).json({ error: 'studentName required' });
@@ -414,9 +391,7 @@ app.delete('/api/manual-journal/:id', async (req, res) => {
 });
 
 // --- EDIT TASKS ---
-app.get('/api/edit-tasks', async (req, res) => {
-  res.json(await readCollection('editTasks'));
-});
+app.get('/api/edit-tasks', async (req, res) => res.json(await readCollection('editTasks')));
 app.post('/api/edit-tasks', async (req, res) => {
   const { title, instructions, sourceText, correctText, createdBy } = req.body || {};
   if (!title || !sourceText) return res.status(400).json({ error: 'title and sourceText required' });
@@ -437,9 +412,7 @@ app.delete('/api/edit-tasks/:id', async (req, res) => {
 });
 
 // --- EDIT SUBMISSIONS ---
-app.get('/api/edit-submissions', async (req, res) => {
-  res.json(await readCollection('editSubmissions'));
-});
+app.get('/api/edit-submissions', async (req, res) => res.json(await readCollection('editSubmissions')));
 app.post('/api/edit-submissions', async (req, res) => {
   const { taskId, student, text } = req.body || {};
   if (!taskId || !student || !text) return res.status(400).json({ error: 'taskId, student and text required' });
@@ -467,9 +440,7 @@ app.patch('/api/edit-submissions/:id/review', async (req, res) => {
 });
 
 // --- TEXT MATERIALS ---
-app.get('/api/text-materials', async (req, res) => {
-  res.json(await readCollection('textMaterials'));
-});
+app.get('/api/text-materials', async (req, res) => res.json(await readCollection('textMaterials')));
 app.post('/api/text-materials', async (req, res) => {
   const { title, content } = req.body || {};
   if (!title || content === undefined) return res.status(400).json({ error: 'title and content required' });
@@ -491,5 +462,4 @@ app.delete('/api/text-materials/:id', async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`Static site served from: ${staticRoot}`);
 });
