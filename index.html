@@ -350,6 +350,78 @@
         .grade-toast-body  { font-size:0.88rem; opacity:0.9; }
         .grade-toast-close { position:absolute; top:8px; right:10px; background:transparent; border:none; color:#fff; cursor:pointer; font-size:1rem; opacity:0.7; }
 
+        /* ── ESSAYS ── */
+        .essays-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:22px; }
+        .essay-card {
+            background:var(--white); border-radius:var(--radius); overflow:hidden;
+            box-shadow:var(--shadow-subtle); border:1px solid var(--border);
+            transition:transform 0.18s,box-shadow 0.18s;
+        }
+        .essay-card:hover { transform:translateY(-4px); box-shadow:var(--shadow-soft); }
+        .essay-preview-wrap {
+            width:100%; height:220px; background:#f1f5f9;
+            border-bottom:1px solid var(--border); overflow:hidden;
+            position:relative; cursor:pointer;
+        }
+        .essay-preview-wrap iframe {
+            width:100%; height:100%; border:none;
+            pointer-events:none; transform-origin:top left;
+        }
+        .essay-preview-wrap img {
+            width:100%; height:100%; object-fit:cover;
+        }
+        .essay-preview-placeholder {
+            width:100%; height:100%; display:flex; flex-direction:column;
+            align-items:center; justify-content:center; gap:8px;
+            color:var(--text-muted); background:var(--primary-soft);
+        }
+        .essay-preview-placeholder i { font-size:2.5rem; color:var(--primary-light); }
+        .essay-preview-overlay {
+            position:absolute; inset:0; background:rgba(15,23,42,0);
+            display:flex; align-items:center; justify-content:center;
+            transition:background 0.2s;
+        }
+        .essay-preview-wrap:hover .essay-preview-overlay { background:rgba(15,23,42,0.35); }
+        .essay-preview-overlay span {
+            background:var(--accent); color:#111; border-radius:999px;
+            padding:8px 18px; font-weight:700; font-size:0.88rem;
+            opacity:0; transition:opacity 0.2s;
+        }
+        .essay-preview-wrap:hover .essay-preview-overlay span { opacity:1; }
+        .essay-info { padding:16px 18px; }
+        .essay-title { font-weight:700; color:var(--text-main); font-size:1rem; margin-bottom:6px; }
+        .essay-meta { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; align-items:center; }
+        .essay-author { font-size:0.82rem; color:var(--text-muted); }
+        .essay-grade-badge {
+            background:linear-gradient(135deg,var(--accent),#f97316);
+            color:#111; border-radius:999px; padding:3px 10px;
+            font-size:0.78rem; font-weight:800;
+        }
+        .essay-desc { font-size:0.85rem; color:var(--text-muted); margin-bottom:12px; line-height:1.5; }
+        .essay-actions { display:flex; gap:8px; }
+
+        /* essay fullscreen modal */
+        .essay-view-overlay {
+            display:none; position:fixed; inset:0;
+            background:rgba(15,23,42,0.95); z-index:4500;
+            flex-direction:column; align-items:center;
+            backdrop-filter:blur(8px);
+        }
+        .essay-view-overlay.open { display:flex; }
+        .essay-view-toolbar {
+            width:100%; max-width:900px; display:flex;
+            align-items:center; gap:12px; padding:14px 20px;
+            flex-shrink:0;
+        }
+        .essay-view-title { color:#fff; font-weight:700; font-size:1rem; flex:1; }
+        .essay-view-frame {
+            width:100%; max-width:900px; flex:1;
+            background:#fff; border-radius:12px 12px 0 0;
+            overflow:hidden; margin:0 16px;
+        }
+        .essay-view-frame iframe { width:100%; height:100%; border:none; }
+        .essay-view-frame img { width:100%; height:100%; object-fit:contain; }
+
         /* ── WELCOME / ABOUT MODAL ── */
         .welcome-overlay {
             display:none; position:fixed; top:0; left:0; width:100%; height:100%;
@@ -570,6 +642,7 @@
             <button class="nav-group-btn" onclick="toggleDropdown(this)"><i class="fa-solid fa-pencil"></i> დავალება <i class="fa-solid fa-chevron-down chevron"></i></button>
             <div class="nav-dropdown">
                 <button onclick="closeDropdowns();switchTab('assignments')"><i class="fa-solid fa-file-arrow-up"></i> დავალებები</button>
+                <button onclick="closeDropdowns();switchTab('essays')"><i class="fa-solid fa-award"></i> მაღალქულიანი ესეები</button>
                 <button onclick="closeDropdowns();switchTab('editTasks')"><i class="fa-solid fa-highlighter"></i> რედაქტირება</button>
                 <button onclick="closeDropdowns();switchTab('quizzes')"><i class="fa-solid fa-circle-question"></i> ქვიზები</button>
             </div>
@@ -644,6 +717,7 @@
     <div class="mobile-menu-section">
         <div class="mobile-menu-label">დავალება</div>
         <button class="mobile-menu-item" onclick="mobileNav('assignments')"><i class="fa-solid fa-file-arrow-up"></i> დავალებები</button>
+        <button class="mobile-menu-item" onclick="mobileNav('essays')"><i class="fa-solid fa-award"></i> მაღალქულიანი ესეები</button>
         <button class="mobile-menu-item" onclick="mobileNav('editTasks')"><i class="fa-solid fa-highlighter"></i> რედაქტირება</button>
         <button class="mobile-menu-item" onclick="mobileNav('quizzes')"><i class="fa-solid fa-circle-question"></i> ქვიზები</button>
     </div>
@@ -782,7 +856,58 @@
         <div class="grid" id="assignmentsGrid"></div>
     </section>
 
-    <!-- EDIT TASKS -->
+    <!-- ESSAYS -->
+    <section id="essays">
+        <div class="section-header">
+            <h2>მაღალქულიანი ესეები</h2>
+            <p>საუკეთესო ნაშრომები — ისწავლე საუკეთესოსგან</p>
+        </div>
+        <div class="admin-toolbar" id="essaysToolbar">
+            <button class="btn-add" onclick="toggleEssayUpload()"><i class="fa-solid fa-file-arrow-up"></i> ნაშრომის ატვირთვა</button>
+            <div id="essayUploadForm" style="display:none;margin-top:14px;padding-top:14px;border-top:1px dashed rgba(59,130,246,0.5);text-align:left;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <div>
+                        <label style="font-size:0.82rem;color:var(--text-muted);display:block;margin-bottom:2px;">სათაური *</label>
+                        <input type="text" id="essayTitle" placeholder="ნაშრომის სათაური">
+                    </div>
+                    <div>
+                        <label style="font-size:0.82rem;color:var(--text-muted);display:block;margin-bottom:2px;">ავტორი</label>
+                        <input type="text" id="essayAuthor" placeholder="მოსწავლის სახელი">
+                    </div>
+                    <div>
+                        <label style="font-size:0.82rem;color:var(--text-muted);display:block;margin-bottom:2px;">ქულა</label>
+                        <input type="text" id="essayGrade" placeholder="მაგ. 98/100">
+                    </div>
+                    <div>
+                        <label style="font-size:0.82rem;color:var(--text-muted);display:block;margin-bottom:2px;">მოკლე აღწერა</label>
+                        <input type="text" id="essayDesc" placeholder="თემა / კომენტარი">
+                    </div>
+                </div>
+                <label style="font-size:0.82rem;color:var(--text-muted);display:block;margin-top:8px;margin-bottom:2px;">ფაილი (PDF, სურათი, Word) *</label>
+                <input type="file" id="essayFile" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp">
+                <button class="btn btn-accent" style="margin-top:10px;width:auto;padding:10px 24px;" onclick="submitEssay()">
+                    <i class="fa-solid fa-upload"></i> ატვირთვა
+                </button>
+            </div>
+        </div>
+        <div class="essays-grid" id="essaysGrid">
+            <p style="color:var(--text-muted);grid-column:1/-1;">იტვირთება...</p>
+        </div>
+    </section>
+
+    <!-- ESSAY FULLSCREEN VIEW -->
+    <div class="essay-view-overlay" id="essayViewOverlay">
+        <div class="essay-view-toolbar">
+            <button onclick="closeEssayView()" style="background:rgba(255,255,255,0.1);border:none;color:#fff;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:0.9rem;">
+                <i class="fa-solid fa-arrow-left"></i> უკან
+            </button>
+            <div class="essay-view-title" id="essayViewTitle"></div>
+            <a id="essayViewDownload" href="#" download target="_blank" class="btn btn-accent btn-sm" style="width:auto;">
+                <i class="fa-solid fa-download"></i> ჩამოტვირთვა
+            </a>
+        </div>
+        <div class="essay-view-frame" id="essayViewFrame"></div>
+    </div>
     <section id="editTasks">
         <div class="section-header">
             <h2>რედაქტირების დავალებები</h2>
@@ -1134,7 +1259,8 @@ function switchTab(tabId) {
         studentActivity: () => { loadStudentActivity(); },
         teacherPanel: () => { loadTeacherAssignments(); refreshTeacherJournal(); loadManualJournal(); },
         editTasks: () => { loadEditTasks(); if (isAdmin) loadEditSubmissions(); },
-        assignments: loadAssignmentSubmissions
+        assignments: loadAssignmentSubmissions,
+        essays: loadEssays
     };
     if (loaders[tabId]) loaders[tabId]();
 }
@@ -1851,8 +1977,138 @@ async function deleteAssignment(id) {
 }
 
 /* ═══════════════════════════════════════════════════
-   FORUM
+   ESSAYS (მაღალქულიანი ნაშრომები)
 ═══════════════════════════════════════════════════ */
+function toggleEssayUpload() {
+    const f = document.getElementById('essayUploadForm');
+    f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+async function submitEssay() {
+    const title  = (document.getElementById('essayTitle') || {}).value || '';
+    const author = (document.getElementById('essayAuthor') || {}).value || '';
+    const grade  = (document.getElementById('essayGrade') || {}).value || '';
+    const desc   = (document.getElementById('essayDesc') || {}).value || '';
+    const fileInput = document.getElementById('essayFile');
+    if (!title.trim()) { alert('სათაური აუცილებელია!'); return; }
+    if (!fileInput || !fileInput.files.length) { alert('ფაილი აუცილებელია!'); return; }
+    const btn = document.querySelector('#essayUploadForm .btn-accent');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> იტვირთება...'; }
+    const formData = new FormData();
+    formData.append('title', title.trim());
+    formData.append('author', author.trim());
+    formData.append('grade', grade.trim());
+    formData.append('description', desc.trim());
+    formData.append('file', fileInput.files[0]);
+    try {
+        const resp = await fetch('/api/essays/upload', { method: 'POST', body: formData });
+        if (!resp.ok) { alert('ატვირთვა ვერ მოხერხდა!'); return; }
+        ['essayTitle','essayAuthor','essayGrade','essayDesc'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+        fileInput.value = '';
+        toggleEssayUpload();
+        showToast('ნაშრომი ატვირთულია ✓');
+        loadEssays();
+    } catch (e) { alert('შეცდომა!'); }
+    finally { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-upload"></i> ატვირთვა'; } }
+}
+
+async function loadEssays() {
+    const grid = document.getElementById('essaysGrid');
+    if (!grid) return;
+    grid.innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;">იტვირთება...</p>';
+    try {
+        const resp = await fetch('/api/essays');
+        const items = resp.ok ? await resp.json() : [];
+        if (!items.length) {
+            grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--text-muted);">
+                <i class="fa-solid fa-award" style="font-size:3rem;opacity:0.2;display:block;margin-bottom:12px;"></i>
+                მაღალქულიანი ნაშრომები ჯერ არ არის დამატებული.
+            </div>`;
+            return;
+        }
+        grid.innerHTML = items.map(item => {
+            const ext = (item.originalName || '').split('.').pop().toLowerCase();
+            const isPdf = ext === 'pdf' || (item.mimeType || '').includes('pdf');
+            const isImg = ['jpg','jpeg','png','webp','gif'].includes(ext) || (item.mimeType || '').startsWith('image/');
+            let previewHtml = '';
+            if (isPdf) {
+                previewHtml = `<iframe src="${item.fileUrl}#toolbar=0&navpanes=0" title="${escapeHtml(item.title)}"></iframe>`;
+            } else if (isImg) {
+                previewHtml = `<img src="${escapeHtml(item.fileUrl)}" alt="${escapeHtml(item.title)}">`;
+            } else {
+                previewHtml = `<div class="essay-preview-placeholder">
+                    <i class="fa-solid fa-file-word"></i>
+                    <span style="font-size:0.82rem;">${escapeHtml(item.originalName || '')}</span>
+                </div>`;
+            }
+            return `
+            <div class="essay-card">
+                <div class="essay-preview-wrap" onclick="openEssayView('${escapeHtml(item.fileUrl)}','${escapeHtml(item.title)}','${isPdf?'pdf':isImg?'img':'other'}')">
+                    ${previewHtml}
+                    <div class="essay-preview-overlay"><span><i class="fa-solid fa-expand"></i> სრულად ნახვა</span></div>
+                </div>
+                <div class="essay-info">
+                    <div class="essay-title">${escapeHtml(item.title)}</div>
+                    <div class="essay-meta">
+                        <span class="essay-author"><i class="fa-solid fa-user" style="margin-right:4px;"></i>${escapeHtml(item.author)}</span>
+                        ${item.grade ? `<span class="essay-grade-badge">⭐ ${escapeHtml(item.grade)}</span>` : ''}
+                    </div>
+                    ${item.description ? `<div class="essay-desc">${escapeHtml(item.description)}</div>` : ''}
+                    <div class="essay-actions">
+                        <button class="btn" style="flex:2;margin-top:0;padding:9px 12px;font-size:0.85rem;" onclick="openEssayView('${escapeHtml(item.fileUrl)}','${escapeHtml(item.title)}','${isPdf?'pdf':isImg?'img':'other'}')">
+                            <i class="fa-solid fa-eye"></i> ნახვა
+                        </button>
+                        <a href="${escapeHtml(item.fileUrl)}" download target="_blank" class="btn btn-accent" style="flex:1;margin-top:0;padding:9px 12px;font-size:0.85rem;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;">
+                            <i class="fa-solid fa-download"></i>
+                        </a>
+                        ${isAdmin ? `<button class="btn-delete show" style="margin-top:0;" onclick="deleteEssay(${item.id})"><i class="fa-solid fa-trash"></i></button>` : ''}
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (e) {
+        grid.innerHTML = '<p style="color:#b91c1c;grid-column:1/-1;">ჩატვირთვა ვერ მოხერხდა.</p>';
+    }
+}
+
+function openEssayView(url, title, type) {
+    const overlay = document.getElementById('essayViewOverlay');
+    const frame   = document.getElementById('essayViewFrame');
+    const titleEl = document.getElementById('essayViewTitle');
+    const dlBtn   = document.getElementById('essayViewDownload');
+    titleEl.textContent = title;
+    dlBtn.href = url;
+    if (type === 'pdf') {
+        frame.innerHTML = `<iframe src="${url}" style="width:100%;height:100%;border:none;"></iframe>`;
+    } else if (type === 'img') {
+        frame.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:contain;background:#111;">`;
+    } else {
+        frame.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px;background:var(--white);">
+            <i class="fa-solid fa-file-word" style="font-size:4rem;color:var(--primary-light);"></i>
+            <p style="color:var(--text-muted);">Word ფაილი — ჩამოტვირთეთ სანახავად</p>
+            <a href="${url}" download target="_blank" class="btn btn-accent" style="width:auto;">
+                <i class="fa-solid fa-download"></i> ჩამოტვირთვა
+            </a>
+        </div>`;
+    }
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeEssayView() {
+    document.getElementById('essayViewOverlay').classList.remove('open');
+    document.getElementById('essayViewFrame').innerHTML = '';
+    document.body.style.overflow = '';
+}
+
+async function deleteEssay(id) {
+    if (!confirm('წავშალო?')) return;
+    await fetch('/api/essays/' + id, { method: 'DELETE' });
+    showToast('წაიშალა ✓');
+    loadEssays();
+}
+
+
 async function loadForum() {
     const thread = document.getElementById('forumThread');
     if (!thread) return;
