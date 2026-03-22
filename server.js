@@ -49,6 +49,7 @@ const upload = multer({ storage: multer.memoryStorage() });
   await ensureCollection('aboutPage');
   await ensureCollection('studentActivity');
   await ensureCollection('studentProgress');
+  await ensureCollection('essays');
 })();
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
@@ -614,6 +615,50 @@ app.patch('/api/edit-submissions/:id/review', async (req, res) => {
   if (idx === -1) return res.status(404).json({ error: 'not found' });
   items[idx] = { ...items[idx], teacherStatus, teacherNote, score };
   await writeCollection('editSubmissions', items);
+  res.json({ ok: true });
+});
+
+// ─── ESSAYS (მაღალქულიანი ნაშრომები) ─────────────────────────────────────────
+app.get('/api/essays', async (req, res) => res.json(await readCollection('essays')));
+
+app.post('/api/essays/upload', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'file required' });
+    const { title, author, grade, description } = req.body || {};
+    if (!title) return res.status(400).json({ error: 'title required' });
+    const safeName = Date.now() + '-' + req.file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_');
+    const filePath = 'essays/' + safeName;
+    const { error: uploadError } = await supabase.storage
+      .from('uploads')
+      .upload(filePath, req.file.buffer, { contentType: req.file.mimetype });
+    if (uploadError) throw uploadError;
+    const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(filePath);
+    const items = await readCollection('essays');
+    const item = {
+      id: nextId(items), title: title.trim(),
+      author: author || 'უცნობი', grade: grade || '',
+      description: description || '',
+      originalName: req.file.originalname,
+      fileUrl: publicUrl,
+      mimeType: req.file.mimetype,
+      createdAt: new Date().toISOString()
+    };
+    items.push(item);
+    await writeCollection('essays', items);
+    res.status(201).json(item);
+  } catch (e) {
+    console.error('Essay upload error:', e);
+    res.status(500).json({ error: 'upload failed' });
+  }
+});
+
+app.delete('/api/essays/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const items = await readCollection('essays');
+  const idx = items.findIndex(x => x.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'not found' });
+  items.splice(idx, 1);
+  await writeCollection('essays', items);
   res.json({ ok: true });
 });
 
