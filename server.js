@@ -31,6 +31,7 @@ const upload = multer({ storage: multer.memoryStorage() });
   await ensureCollection('siteContent');
   await ensureCollection('dictionary');
   await ensureCollection('phrases');
+  await ensureCollection('proverbs');
   await ensureCollection('forumPosts');
   await ensureCollection('forumComments');
   await ensureCollection('textMaterials');
@@ -45,12 +46,14 @@ const upload = multer({ storage: multer.memoryStorage() });
   await ensureCollection('manualJournal');
   await ensureCollection('editTasks');
   await ensureCollection('editSubmissions');
+  await ensureCollection('aboutPage');
+  await ensureCollection('studentActivity');
 })();
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
-// --- AUTH ---
+// ─── AUTH ────────────────────────────────────────────────────────────────────
 app.post('/api/register', async (req, res) => {
   const { username, password } = req.body || {};
   if (!username || !password) return res.status(400).json({ error: 'username and password required' });
@@ -71,7 +74,147 @@ app.post('/api/login', async (req, res) => {
   res.json({ role: 'student', username: user.username });
 });
 
-// --- SITE CONTENT ---
+// ─── STUDENT ACTIVITY (heartbeat + last seen) ─────────────────────────────
+app.post('/api/activity/ping', async (req, res) => {
+  const { username } = req.body || {};
+  if (!username || username === 'სტუმარი') return res.json({ ok: true });
+  const items = await readCollection('studentActivity');
+  const idx = items.findIndex(x => x.username === username);
+  const now = new Date().toISOString();
+  if (idx !== -1) {
+    items[idx].lastSeen = now;
+    items[idx].online = true;
+  } else {
+    items.push({ id: nextId(items), username, lastSeen: now, online: true });
+  }
+  await writeCollection('studentActivity', items);
+  res.json({ ok: true });
+});
+
+// Mark user offline
+app.post('/api/activity/offline', async (req, res) => {
+  const { username } = req.body || {};
+  if (!username) return res.json({ ok: true });
+  const items = await readCollection('studentActivity');
+  const idx = items.findIndex(x => x.username === username);
+  if (idx !== -1) {
+    items[idx].online = false;
+    items[idx].lastSeen = new Date().toISOString();
+    await writeCollection('studentActivity', items);
+  }
+  res.json({ ok: true });
+});
+
+// Get all student activity (teacher only)
+app.get('/api/activity', async (req, res) => {
+  const activity = await readCollection('studentActivity');
+  const students = await readCollection('students');
+  const grades = await readCollection('grades');
+  const groups = await readCollection('studentGroups');
+  const assignments = await readCollection('assignmentSubmissions');
+  const quizAttempts = await readCollection('quizAttempts');
+
+  // Mark stale pings (>3 min) as offline
+  const now = Date.now();
+  const enriched = students.map(s => {
+    const act = activity.find(a => a.username === s.name) || {};
+    const lastSeen = act.lastSeen ? new Date(act.lastSeen) : null;
+    const diffMin = lastSeen ? (now - lastSeen.getTime()) / 60000 : Infinity;
+    const online = diffMin < 3;
+    const grade = grades.find(g => g.user === s.name) || {};
+    const group = groups.find(g => g.user === s.name) || {};
+    const assignCount = assignments.filter(a => (a.author || '').replace('👤 ', '') === s.name).length;
+    const quizzes = quizAttempts.filter(q => (q.user || '').replace('👤 ', '') === s.name);
+    const avgScore = quizzes.length ? Math.round(quizzes.reduce((sum, q) => sum + (q.total ? (q.score / q.total) * 100 : 0), 0) / quizzes.length) : 0;
+    return {
+      username: s.name,
+      online,
+      lastSeen: act.lastSeen || null,
+      group: group.group || '',
+      score: grade.score || 0,
+      note: grade.note || '',
+      assignments: assignCount,
+      quizzes: quizzes.length,
+      avgScore
+    };
+  });
+  res.json(enriched);
+});
+
+// ─── ABOUT PAGE ────────────────────────────────────────────────────────────
+app.get('/api/about', async (req, res) => {
+  const items = await readCollection('aboutPage');
+  res.json(items[0] || { bio: '', photoUrl: '', extraText: '' });
+});
+
+app.post('/api/about', async (req, res) => {
+  const { bio, extraText } = req.body || {};
+  const items = await readCollection('aboutPage');
+  if (items.length) {
+    items[0].bio = bio || items[0].bio;
+    items[0].extraText = extraText || items[0].extraText;
+  } else {
+    items.push({ id: 1, bio: bio || '', extraText: extraText || '', photoUrl: '' });
+  }
+  await writeCollection('aboutPage', items);
+  res.json({ ok: true });
+});
+
+app.post('/api/about/photo', upload.single('photo'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'photo required' });
+    const safeName = 'about-photo-' + Date.now() + path.extname(req.file.originalname);
+    const filePath = 'about/' + safeName;
+    const { error: uploadError } = await supabase.storage
+      .from('uploads')
+      .upload(filePath, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
+    if (uploadError) throw uploadError;
+    const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(filePath);
+    const items = await readCollection('aboutPage');
+    if (items.length) { items[0].photoUrl = publicUrl; }
+    else { items.push({ id: 1, bio: '', extraText: '', photoUrl: publicUrl }); }
+    await writeCollection('aboutPage', items);
+    res.json({ ok: true, photoUrl: publicUrl });
+  } catch (e) {
+    console.error('About photo upload error:', e);
+    res.status(500).json({ error: 'upload failed' });
+  }
+});
+
+// ─── PROVERBS ─────────────────────────────────────────────────────────────
+app.get('/api/proverbs', async (req, res) => res.json(await readCollection('proverbs')));
+
+app.post('/api/proverbs', async (req, res) => {
+  const { text, meaning, source } = req.body || {};
+  if (!text) return res.status(400).json({ error: 'text required' });
+  const items = await readCollection('proverbs');
+  const item = { id: nextId(items), text, meaning: meaning || '', source: source || '', createdAt: new Date().toISOString() };
+  items.push(item);
+  await writeCollection('proverbs', items);
+  res.status(201).json(item);
+});
+
+app.put('/api/proverbs/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const items = await readCollection('proverbs');
+  const idx = items.findIndex(x => x.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'not found' });
+  items[idx] = { ...items[idx], ...req.body };
+  await writeCollection('proverbs', items);
+  res.json({ ok: true });
+});
+
+app.delete('/api/proverbs/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const items = await readCollection('proverbs');
+  const idx = items.findIndex(x => x.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'not found' });
+  items.splice(idx, 1);
+  await writeCollection('proverbs', items);
+  res.json({ ok: true });
+});
+
+// ─── SITE CONTENT ──────────────────────────────────────────────────────────
 app.get('/api/site-content', async (req, res) => {
   const items = await readCollection('siteContent');
   res.json(items[0] ? items[0] : { content: null });
@@ -85,7 +228,7 @@ app.post('/api/site-content', async (req, res) => {
   res.json({ ok: true });
 });
 
-// --- DICTIONARY ---
+// ─── DICTIONARY ────────────────────────────────────────────────────────────
 app.get('/api/dictionary', async (req, res) => res.json(await readCollection('dictionary')));
 app.post('/api/dictionary', async (req, res) => {
   const { word, definition } = req.body || {};
@@ -106,7 +249,7 @@ app.delete('/api/dictionary/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
-// --- PHRASES ---
+// ─── PHRASES ───────────────────────────────────────────────────────────────
 app.get('/api/phrases', async (req, res) => res.json(await readCollection('phrases')));
 app.post('/api/phrases', async (req, res) => {
   const { phrase, meaning } = req.body || {};
@@ -127,7 +270,7 @@ app.delete('/api/phrases/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
-// --- FORUM ---
+// ─── FORUM ─────────────────────────────────────────────────────────────────
 app.get('/api/forum/posts', async (req, res) => {
   const posts = await readCollection('forumPosts');
   const comments = await readCollection('forumComments');
@@ -162,7 +305,7 @@ app.post('/api/forum/posts/:id/comments', async (req, res) => {
   res.status(201).json(item);
 });
 
-// --- MATERIALS (files go to Supabase Storage) ---
+// ─── MATERIALS ─────────────────────────────────────────────────────────────
 app.get('/api/materials', async (req, res) => res.json(await readCollection('materials')));
 
 app.post('/api/materials/upload', upload.single('file'), async (req, res) => {
@@ -173,17 +316,11 @@ app.post('/api/materials/upload', upload.single('file'), async (req, res) => {
     const displayName = (originalFilename && originalFilename.trim()) ? originalFilename.trim() : req.file.originalname;
     const safeName = Date.now() + '-' + req.file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_');
     const filePath = 'materials/' + safeName;
-
     const { error: uploadError } = await supabase.storage
       .from('uploads')
       .upload(filePath, req.file.buffer, { contentType: req.file.mimetype });
-
     if (uploadError) throw uploadError;
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('uploads')
-      .getPublicUrl(filePath);
-
+    const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(filePath);
     const items = await readCollection('materials');
     const item = { id: nextId(items), title: title.trim(), type: 'file', originalName: displayName, fileUrl: publicUrl, createdAt: new Date().toISOString() };
     items.push(item);
@@ -215,7 +352,7 @@ app.delete('/api/materials/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
-// --- ASSIGNMENTS (files go to Supabase Storage) ---
+// ─── ASSIGNMENTS ───────────────────────────────────────────────────────────
 app.get('/api/assignments/submissions', async (req, res) => res.json(await readCollection('assignmentSubmissions')));
 
 app.post('/api/assignments/upload', upload.single('file'), async (req, res) => {
@@ -226,17 +363,11 @@ app.post('/api/assignments/upload', upload.single('file'), async (req, res) => {
     const displayName = (originalFilename && originalFilename.trim()) ? originalFilename.trim() : req.file.originalname;
     const safeName = Date.now() + '-' + req.file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_');
     const filePath = 'assignments/' + safeName;
-
     const { error: uploadError } = await supabase.storage
       .from('uploads')
       .upload(filePath, req.file.buffer, { contentType: req.file.mimetype });
-
     if (uploadError) throw uploadError;
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('uploads')
-      .getPublicUrl(filePath);
-
+    const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(filePath);
     const items = await readCollection('assignmentSubmissions');
     const item = { id: nextId(items), title, author, originalName: displayName, fileUrl: publicUrl, createdAt: new Date().toISOString() };
     items.push(item);
@@ -258,7 +389,7 @@ app.delete('/api/assignments/submissions/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
-// --- QUIZZES ---
+// ─── QUIZZES ───────────────────────────────────────────────────────────────
 app.get('/api/quizzes', async (req, res) => res.json(await readCollection('quizzes')));
 app.post('/api/quizzes', async (req, res) => {
   const { title, questions } = req.body || {};
@@ -279,7 +410,7 @@ app.delete('/api/quizzes/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
-// --- QUIZ ATTEMPTS ---
+// ─── QUIZ ATTEMPTS ─────────────────────────────────────────────────────────
 app.get('/api/quiz-attempts', async (req, res) => res.json(await readCollection('quizAttempts')));
 app.post('/api/quiz-attempts', async (req, res) => {
   const { quizId, user, score, total } = req.body || {};
@@ -290,7 +421,7 @@ app.post('/api/quiz-attempts', async (req, res) => {
   res.status(201).json(item);
 });
 
-// --- NOTIFICATIONS ---
+// ─── NOTIFICATIONS ─────────────────────────────────────────────────────────
 app.get('/api/notifications', async (req, res) => {
   const user = req.query.user || 'all';
   const items = await readCollection('notifications');
@@ -314,7 +445,7 @@ app.patch('/api/notifications/:id/read', async (req, res) => {
   res.json({ ok: true });
 });
 
-// --- STUDENTS ---
+// ─── STUDENTS ──────────────────────────────────────────────────────────────
 app.get('/api/students', async (req, res) => res.json(await readCollection('students')));
 app.post('/api/students', async (req, res) => {
   const { name } = req.body || {};
@@ -336,31 +467,33 @@ app.delete('/api/students/:name', async (req, res) => {
   res.json({ ok: true });
 });
 
-// --- GRADES ---
+// ─── GRADES ────────────────────────────────────────────────────────────────
 app.get('/api/grades', async (req, res) => res.json(await readCollection('grades')));
 app.post('/api/grades', async (req, res) => {
   const { user, score, note } = req.body || {};
   if (!user) return res.status(400).json({ error: 'user required' });
   const items = await readCollection('grades');
   const idx = items.findIndex(x => x.user === user);
-  if (idx !== -1) { items[idx] = { ...items[idx], score, note }; } else { items.push({ id: nextId(items), user, score, note }); }
+  if (idx !== -1) { items[idx] = { ...items[idx], score, note }; }
+  else { items.push({ id: nextId(items), user, score, note }); }
   await writeCollection('grades', items);
   res.json({ ok: true });
 });
 
-// --- STUDENT GROUPS ---
+// ─── STUDENT GROUPS ────────────────────────────────────────────────────────
 app.get('/api/student-groups', async (req, res) => res.json(await readCollection('studentGroups')));
 app.post('/api/student-groups', async (req, res) => {
   const { user, group } = req.body || {};
   if (!user) return res.status(400).json({ error: 'user required' });
   const items = await readCollection('studentGroups');
   const idx = items.findIndex(x => x.user === user);
-  if (idx !== -1) { items[idx].group = group; } else { items.push({ id: nextId(items), user, group }); }
+  if (idx !== -1) { items[idx].group = group; }
+  else { items.push({ id: nextId(items), user, group }); }
   await writeCollection('studentGroups', items);
   res.json({ ok: true });
 });
 
-// --- MANUAL JOURNAL ---
+// ─── MANUAL JOURNAL ────────────────────────────────────────────────────────
 app.get('/api/manual-journal', async (req, res) => res.json(await readCollection('manualJournal')));
 app.post('/api/manual-journal', async (req, res) => {
   const payload = req.body || {};
@@ -390,7 +523,7 @@ app.delete('/api/manual-journal/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
-// --- EDIT TASKS ---
+// ─── EDIT TASKS ────────────────────────────────────────────────────────────
 app.get('/api/edit-tasks', async (req, res) => res.json(await readCollection('editTasks')));
 app.post('/api/edit-tasks', async (req, res) => {
   const { title, instructions, sourceText, correctText, createdBy } = req.body || {};
@@ -411,7 +544,7 @@ app.delete('/api/edit-tasks/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
-// --- EDIT SUBMISSIONS ---
+// ─── EDIT SUBMISSIONS ──────────────────────────────────────────────────────
 app.get('/api/edit-submissions', async (req, res) => res.json(await readCollection('editSubmissions')));
 app.post('/api/edit-submissions', async (req, res) => {
   const { taskId, student, text } = req.body || {};
@@ -439,7 +572,7 @@ app.patch('/api/edit-submissions/:id/review', async (req, res) => {
   res.json({ ok: true });
 });
 
-// --- TEXT MATERIALS ---
+// ─── TEXT MATERIALS ────────────────────────────────────────────────────────
 app.get('/api/text-materials', async (req, res) => res.json(await readCollection('textMaterials')));
 app.post('/api/text-materials', async (req, res) => {
   const { title, content } = req.body || {};
