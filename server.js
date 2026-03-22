@@ -48,18 +48,34 @@ const upload = multer({ storage: multer.memoryStorage() });
   await ensureCollection('editSubmissions');
   await ensureCollection('aboutPage');
   await ensureCollection('studentActivity');
+  await ensureCollection('studentProgress');
 })();
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
-// ─── AUTH ────────────────────────────────────────────────────────────────────
+// ─── AUTH (bcrypt) ───────────────────────────────────────────────────────────
+let bcrypt;
+try { bcrypt = require('bcrypt'); } catch (e) { bcrypt = null; }
+
+async function hashPassword(pw) {
+  if (bcrypt) return bcrypt.hash(pw, 10);
+  return pw; // fallback if bcrypt not installed yet
+}
+async function verifyPassword(pw, hash) {
+  if (!bcrypt) return pw === hash;
+  // support old plain-text passwords during migration
+  if (!hash.startsWith('$2')) return pw === hash;
+  return bcrypt.compare(pw, hash);
+}
+
 app.post('/api/register', async (req, res) => {
   const { username, password } = req.body || {};
   if (!username || !password) return res.status(400).json({ error: 'username and password required' });
   const users = await readCollection('users');
   if (users.find(u => u.username === username)) return res.status(409).json({ error: 'username taken' });
-  const newUser = { id: nextId(users), username, password };
+  const hashed = await hashPassword(password);
+  const newUser = { id: nextId(users), username, password: hashed };
   users.push(newUser);
   await writeCollection('users', users);
   res.status(201).json({ id: newUser.id, username: newUser.username });
@@ -69,9 +85,38 @@ app.post('/api/login', async (req, res) => {
   const { username, password } = req.body || {};
   if (username === 'admin' && password === '1234') return res.json({ role: 'teacher', username: 'admin' });
   const users = await readCollection('users');
-  const user = users.find(u => u.username === username && u.password === password);
+  const user = users.find(u => u.username === username);
   if (!user) return res.status(401).json({ error: 'invalid credentials' });
+  const ok = await verifyPassword(password, user.password);
+  if (!ok) return res.status(401).json({ error: 'invalid credentials' });
+  // migrate plain-text → hashed on successful login
+  if (bcrypt && !user.password.startsWith('$2')) {
+    user.password = await hashPassword(password);
+    await writeCollection('users', users);
+  }
   res.json({ role: 'student', username: user.username });
+});
+
+// ─── STUDENT PROGRESS SYNC ──────────────────────────────────────────────────
+app.get('/api/progress/:username', async (req, res) => {
+  const username = decodeURIComponent(req.params.username);
+  const items = await readCollection('studentProgress');
+  const rec = items.find(x => x.username === username) || { username, points: 0, badges: [] };
+  res.json(rec);
+});
+
+app.post('/api/progress/:username', async (req, res) => {
+  const username = decodeURIComponent(req.params.username);
+  const { points, badges } = req.body || {};
+  const items = await readCollection('studentProgress');
+  const idx = items.findIndex(x => x.username === username);
+  if (idx !== -1) {
+    items[idx] = { ...items[idx], points: points ?? items[idx].points, badges: badges ?? items[idx].badges };
+  } else {
+    items.push({ id: nextId(items), username, points: points || 0, badges: badges || [] });
+  }
+  await writeCollection('studentProgress', items);
+  res.json({ ok: true });
 });
 
 // ─── STUDENT ACTIVITY (heartbeat + last seen) ─────────────────────────────
