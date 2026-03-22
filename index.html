@@ -255,14 +255,7 @@
         <div class="admin-toolbar" id="mediaToolbar">
             <button class="btn-add" onclick="addVideoCard()"><i class="fa-brands fa-youtube"></i> ვიდეოს დამატება</button>
         </div>
-        <div class="grid" id="mediaGrid">
-            <div class="card">
-                <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;background:#000;border-radius:5px;margin-bottom:15px;">
-                    <iframe style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" src="https://www.youtube.com/embed/g2J072Y_B4s" allowfullscreen></iframe>
-                </div>
-                <h3>ილია ჭავჭავაძე - ბიოგრაფია</h3>
-            </div>
-        </div>
+        <div class="grid" id="mediaGrid"></div>
     </section>
 
     <!-- MATERIALS -->
@@ -349,7 +342,7 @@
     <section id="notifications">
         <div class="section-header"><h2>შეტყობინებები</h2></div>
         <div style="margin-bottom:16px;">
-            <button class="btn btn-sm" style="width:auto;" onclick="markAllNotificationsRead()">ყველას წაკითხვულად მონიშვნა</button>
+            <button class="btn btn-sm" style="width:auto;" onclick="markAllNotificationsRead()">ყველას წაკითხულად მონიშვნა</button>
         </div>
         <div id="notificationsList"></div>
     </section>
@@ -400,9 +393,6 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// ============================================================
-// STATE
-// ============================================================
 let currentUser = 'სტუმარი';
 let isAdmin = false;
 let quizData = [];
@@ -410,9 +400,6 @@ let currentQuiz = null;
 let quizIndex = 0;
 let quizScore = 0;
 
-// ============================================================
-// UTILS
-// ============================================================
 function showToast(msg) {
     const el = document.getElementById('toast');
     if (!el) return;
@@ -422,9 +409,7 @@ function showToast(msg) {
 }
 
 function escapeHtml(v) {
-    return String(v || '')
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    return String(v || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 }
 
 function toggleTheme() {
@@ -434,9 +419,6 @@ function toggleTheme() {
     document.getElementById('themeIcon').className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
 }
 
-// ============================================================
-// NAVIGATION
-// ============================================================
 function switchTab(tabId) {
     document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-links button[data-tab]').forEach(b => b.classList.remove('active'));
@@ -452,14 +434,12 @@ function switchTab(tabId) {
     if (tabId === 'quizzes') loadAndRenderQuizzes();
     if (tabId === 'notifications') loadNotifications();
     if (tabId === 'profile') renderProfileStats();
+    if (tabId === 'media') loadMedia();
     if (tabId === 'teacherPanel') { loadTeacherAssignments(); refreshTeacherJournal(); loadManualJournal(); }
     if (tabId === 'editTasks') { loadEditTasks(); if (isAdmin) loadEditSubmissions(); }
     if (tabId === 'assignments') loadAssignmentSubmissions();
 }
 
-// ============================================================
-// AUTH
-// ============================================================
 function openAuth() {
     if (currentUser !== 'სტუმარი') {
         currentUser = 'სტუმარი'; isAdmin = false;
@@ -482,11 +462,7 @@ async function register() {
     const password = document.getElementById('regPass').value;
     if (!username || !password) return alert('შეავსეთ ველები!');
     try {
-        const resp = await fetch('/api/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
-        });
+        const resp = await fetch('/api/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, password }) });
         if (resp.status === 409) return alert('სახელი დაკავებულია!');
         if (!resp.ok) return alert('შეცდომა!');
         alert('რეგისტრაცია წარმატებულია!');
@@ -500,11 +476,7 @@ async function login() {
     const username = document.getElementById('loginUser').value.trim();
     const password = document.getElementById('loginPass').value;
     try {
-        const resp = await fetch('/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
-        });
+        const resp = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, password }) });
         if (!resp.ok) return alert('არასწორი მონაცემები!');
         const data = await resp.json();
         isAdmin = data.role === 'teacher';
@@ -531,32 +503,15 @@ function restoreSession() {
 }
 
 function updateUIForRole() {
-    // teacher-only elements
-    document.querySelectorAll('.teacher-only').forEach(el => {
-        el.style.display = isAdmin ? 'block' : 'none';
-    });
-    // student-only elements
-    document.querySelectorAll('.student-only').forEach(el => {
-        el.style.display = (!isAdmin && currentUser !== 'სტუმარი') ? 'block' : 'none';
-    });
-    // admin toolbars
-    document.querySelectorAll('.admin-toolbar').forEach(el => {
-        el.style.display = isAdmin ? 'block' : 'none';
-    });
-    // delete buttons
-    document.querySelectorAll('.btn-delete').forEach(el => {
-        el.style.display = isAdmin ? 'inline-block' : 'none';
-    });
-    // forum new post box
+    document.querySelectorAll('.teacher-only').forEach(el => el.style.display = isAdmin ? 'block' : 'none');
+    document.querySelectorAll('.student-only').forEach(el => el.style.display = (!isAdmin && currentUser !== 'სტუმარი') ? 'block' : 'none');
+    document.querySelectorAll('.admin-toolbar').forEach(el => el.style.display = isAdmin ? 'block' : 'none');
+    document.querySelectorAll('.btn-delete').forEach(el => el.style.display = isAdmin ? 'inline-block' : 'none');
     const newPostBox = document.getElementById('newPostBox');
     if (newPostBox) newPostBox.style.display = (currentUser !== 'სტუმარი') ? 'block' : 'none';
-    // update progress
     if (!isAdmin && currentUser !== 'სტუმარი') updateProgressUI();
 }
 
-// ============================================================
-// PROGRESS / GAMIFICATION (local per user)
-// ============================================================
 function getProgressKey() {
     if (isAdmin) return null;
     return 'progress_' + currentUser.replace('👤 ', '');
@@ -590,9 +545,6 @@ function updateProgressUI() {
     const b = document.getElementById('statBadges'); if (b) b.textContent = rec.badges.length ? rec.badges.join(' • ') : 'ჯერ არ გაქვს';
 }
 
-// ============================================================
-// DICTIONARY
-// ============================================================
 async function loadDictionary() {
     const list = document.getElementById('dictList');
     if (!list) return;
@@ -613,11 +565,7 @@ async function loadDictionary() {
 async function addDictWord() {
     const word = prompt('ჩაწერეთ სიტყვა:'); if (!word) return;
     const definition = prompt('ჩაწერეთ განმარტება:'); if (!definition) return;
-    await fetch('/api/dictionary', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word, definition })
-    });
+    await fetch('/api/dictionary', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ word, definition }) });
     showToast('სიტყვა დაემატა ✓');
     loadDictionary();
 }
@@ -636,9 +584,6 @@ function filterDict() {
     });
 }
 
-// ============================================================
-// PHRASES (FLASHCARDS)
-// ============================================================
 async function loadPhrases() {
     const grid = document.getElementById('phraseGrid');
     if (!grid) return;
@@ -666,11 +611,7 @@ async function loadPhrases() {
 async function addPhrase() {
     const phrase = prompt('ჩაწერე ფრაზეოლოგიზმი:'); if (!phrase) return;
     const meaning = prompt('ჩაწერე მნიშვნელობა:'); if (!meaning) return;
-    await fetch('/api/phrases', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phrase, meaning })
-    });
+    await fetch('/api/phrases', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ phrase, meaning }) });
     showToast('ფრაზა დაემატა ✓');
     loadPhrases();
 }
@@ -682,9 +623,6 @@ async function deletePhrase(id) {
     loadPhrases();
 }
 
-// ============================================================
-// MATERIALS
-// ============================================================
 async function loadMaterials() {
     const grid = document.getElementById('materialsGrid');
     if (!grid) return;
@@ -754,12 +692,36 @@ async function addMaterialVideo() {
     const url = prompt('YouTube ლინკი:'); if (!url) return;
     await fetch('/api/materials/youtube', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ title, url }) });
     showToast('ვიდეო დამატებულია ✓');
+    await fetch('/api/notifications', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user:'all', kind:'material', message:'დაემატა ვიდეო: ' + title }) });
     loadMaterials();
+    loadNotifications();
 }
 
-// ============================================================
-// ASSIGNMENTS
-// ============================================================
+// MEDIA (local, stored in DB too via materials)
+async function loadMedia() {
+    const grid = document.getElementById('mediaGrid');
+    if (!grid) return;
+    // Media section shows same YouTube materials from DB
+    try {
+        const resp = await fetch('/api/materials');
+        const items = resp.ok ? await resp.json() : [];
+        const videos = items.filter(i => i.type === 'youtube');
+        if (!videos.length) { grid.innerHTML = '<p style="color:var(--text-muted);">ვიდეოები ჯერ არ არის. მასალების განყოფილებაში დაამატეთ YouTube ვიდეო.</p>'; return; }
+        grid.innerHTML = videos.map(item => {
+            const match = item.url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/);
+            const vid = match && match[2] && match[2].length === 11 ? match[2] : '';
+            if (!vid) return '';
+            return `<div class="card"><h3>${escapeHtml(item.title)}</h3><div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;background:#000;border-radius:5px;margin-top:12px;"><iframe style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" src="https://www.youtube.com/embed/${vid}" allowfullscreen></iframe></div></div>`;
+        }).join('');
+    } catch (e) { grid.innerHTML = '<p style="color:#b91c1c;">ჩატვირთვა ვერ მოხერხდა.</p>'; }
+}
+
+function addVideoCard() {
+    // Redirect teacher to use Materials section
+    alert('გთხოვთ გამოიყენოთ "მასალები" განყოფილება YouTube ვიდეოს დასამატებლად — ის ყველასთვის გამოჩნდება!');
+    switchTab('materials');
+}
+
 async function loadAssignmentSubmissions() {
     const grid = document.getElementById('assignmentsGrid');
     if (!grid) return;
@@ -779,8 +741,7 @@ async function loadAssignmentSubmissions() {
 }
 
 async function addAssignmentCard() {
-    const title = prompt('დავალების სათაური:'); if (!title) return;
-    showToast('დავალება დაემატა ✓');
+    showToast('მოსწავლეები ატვირთავენ დავალებებს ქვემოთ მოცემული ფორმით ✓');
 }
 
 async function submitAssignment() {
@@ -812,9 +773,6 @@ async function deleteAssignment(id) {
     loadAssignmentSubmissions();
 }
 
-// ============================================================
-// FORUM
-// ============================================================
 async function loadForum() {
     const thread = document.getElementById('forumThread');
     if (!thread) return;
@@ -870,25 +828,6 @@ async function deletePost(id) {
     loadForum();
 }
 
-// ============================================================
-// MEDIA (video cards - stored in HTML for now)
-// ============================================================
-function addVideoCard() {
-    const url = prompt('YouTube ლინკი:'); if (!url) return;
-    const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/);
-    const vid = match && match[2] && match[2].length === 11 ? match[2] : null;
-    if (!vid) { alert('არასწორი ლინკი!'); return; }
-    const title = prompt('სათაური:') || 'ვიდეო';
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.innerHTML = `<h3>${escapeHtml(title)}</h3><div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;background:#000;border-radius:5px;margin-top:12px;"><iframe style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" src="https://www.youtube.com/embed/${vid}" allowfullscreen></iframe></div>${isAdmin ? '<button class="btn-delete show" onclick="this.parentElement.remove()"><i class="fa-solid fa-trash"></i> წაშლა</button>' : ''}`;
-    document.getElementById('mediaGrid').insertBefore(card, document.getElementById('mediaGrid').firstChild);
-    showToast('ვიდეო დამატებულია ✓');
-}
-
-// ============================================================
-// QUIZZES
-// ============================================================
 async function loadAndRenderQuizzes() {
     try {
         const resp = await fetch('/api/quizzes');
@@ -1002,9 +941,6 @@ function closeQuizTake() {
     document.getElementById('quizTakeOptions').style.display = 'block';
 }
 
-// ============================================================
-// NOTIFICATIONS
-// ============================================================
 async function loadNotifications() {
     const listEl = document.getElementById('notificationsList');
     const badge = document.getElementById('notifBadge');
@@ -1021,7 +957,7 @@ async function loadNotifications() {
                 <strong>${escapeHtml(n.kind || 'info')}</strong>
                 <p style="margin:6px 0 4px;">${escapeHtml(n.message)}</p>
                 <small style="color:var(--text-muted);">${new Date(n.createdAt).toLocaleString()}</small>
-                ${!n.read ? `<br><button class="btn btn-sm" onclick="markNotificationRead(${n.id})">წავიკითხე</button>` : ''}
+                ${!n.read ? `<br><button class="btn btn-sm" style="margin-top:6px;" onclick="markNotificationRead(${n.id})">წაკითხულად მონიშვნა</button>` : ''}
             </div>
         `).join('');
     } catch (e) {}
@@ -1039,9 +975,6 @@ async function markAllNotificationsRead() {
     loadNotifications();
 }
 
-// ============================================================
-// EDIT TASKS
-// ============================================================
 async function createEditTask() {
     const title = document.getElementById('editTaskTitle').value.trim();
     const instructions = document.getElementById('editTaskInstructions').value;
@@ -1114,16 +1047,12 @@ async function reviewEditSubmission(id) {
     loadEditSubmissions();
 }
 
-// ============================================================
-// TEACHER JOURNAL
-// ============================================================
 async function loadTeacherAssignments() {
     const container = document.getElementById('teacherAssignments');
     if (!container) return;
     try {
         const resp = await fetch('/api/assignments/submissions');
-        const items = resp.ok ? await resp.json() : [];
-        window._allAssignments = items;
+        window._allAssignments = resp.ok ? await resp.json() : [];
         filterTeacherAssignments();
     } catch (e) {}
 }
@@ -1237,9 +1166,6 @@ async function deleteManualJournalRow(id) {
     loadManualJournal();
 }
 
-// ============================================================
-// PROFILE
-// ============================================================
 async function renderProfileStats() {
     const el = document.getElementById('profileStatsGrid');
     if (!el || isAdmin || currentUser === 'სტუმარი') return;
@@ -1259,15 +1185,13 @@ async function renderProfileStats() {
     } catch (e) {}
 }
 
-// ============================================================
-// INIT
-// ============================================================
 window.onload = async function() {
     if (localStorage.getItem('goniursa_theme') === 'dark') toggleTheme();
     restoreSession();
     updateUIForRole();
     loadDictionary();
     loadPhrases();
+    loadMaterials();
     loadNotifications();
 };
 </script>
