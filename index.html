@@ -1051,6 +1051,7 @@ function openAuth() {
         currentUser = 'სტუმარი'; currentUsername = ''; isAdmin = false;
         sessionStorage.removeItem('goniursa_session');
         document.getElementById('authBtn').textContent = 'შესვლა';
+        const mb = document.getElementById('authBtnMobile'); if (mb) mb.textContent = 'შესვლა';
         updateUIForRole();
     } else {
         document.getElementById('authModal').style.display = 'flex';
@@ -2199,27 +2200,9 @@ window.onload = async function() {
     loadMaterials();
     loadNotifications();
 
-    // grade update polling (every 60s for students)
-    if (!isAdmin && currentUsername) {
-        checkForGradeUpdates();
-        setInterval(checkForGradeUpdates, 60000);
-    }
-
     // warm search cache in background
     setTimeout(() => buildSearchCache().catch(() => {}), 2000);
 };
-
-// sync auth button text on mobile menu too
-const _origOpenAuth = openAuth;
-function openAuth() {
-    _origOpenAuth();
-    syncMobileAuthBtn();
-}
-function syncMobileAuthBtn() {
-    const mb = document.getElementById('authBtnMobile');
-    const db = document.getElementById('authBtn');
-    if (mb && db) mb.textContent = db.textContent;
-}
 </script>
 </body>
 </html>
