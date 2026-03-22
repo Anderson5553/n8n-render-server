@@ -25,16 +25,15 @@ fs.mkdirSync(uploadsAssignments, { recursive: true });
 fs.mkdirSync(uploadsMaterials, { recursive: true });
 
 const storageAssignments = multer.diskStorage({
-  destination: function (req, file, cb) { cb(null, uploadsAssignments); },
-  filename: function (req, file, cb) {
+  destination: (req, file, cb) => cb(null, uploadsAssignments),
+  filename: (req, file, cb) => {
     const safeName = file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_');
     cb(null, Date.now() + '-' + Math.round(Math.random() * 1e9) + '-' + safeName);
   }
 });
-
 const storageMaterials = multer.diskStorage({
-  destination: function (req, file, cb) { cb(null, uploadsMaterials); },
-  filename: function (req, file, cb) {
+  destination: (req, file, cb) => cb(null, uploadsMaterials),
+  filename: (req, file, cb) => {
     const safeName = file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_');
     cb(null, Date.now() + '-' + Math.round(Math.random() * 1e9) + '-' + safeName);
   }
@@ -44,8 +43,12 @@ const upload = multer({ storage: storageAssignments });
 const uploadMaterial = multer({ storage: storageMaterials });
 
 (async () => {
+  await ensureCollection('users');
+  await ensureCollection('siteContent');
   await ensureCollection('dictionary');
+  await ensureCollection('phrases');
   await ensureCollection('forumPosts');
+  await ensureCollection('forumComments');
   await ensureCollection('textMaterials');
   await ensureCollection('materials');
   await ensureCollection('assignmentSubmissions');
@@ -60,244 +63,430 @@ const uploadMaterial = multer({ storage: storageMaterials });
   await ensureCollection('editSubmissions');
 })();
 
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Backend is running' });
+app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/', (req, res) => res.sendFile(path.join(staticRoot, 'index.html')));
+
+// --- AUTH ---
+app.post('/api/register', async (req, res) => {
+  const { username, password } = req.body || {};
+  if (!username || !password) return res.status(400).json({ error: 'username and password required' });
+  const users = await readCollection('users');
+  if (users.find(u => u.username === username)) return res.status(409).json({ error: 'username taken' });
+  const newUser = { id: nextId(users), username, password };
+  users.push(newUser);
+  await writeCollection('users', users);
+  res.status(201).json({ id: newUser.id, username: newUser.username });
 });
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(staticRoot, 'index.html'));
+app.post('/api/login', async (req, res) => {
+  const { username, password } = req.body || {};
+  if (username === 'admin' && password === '1234') return res.json({ role: 'teacher', username: 'admin' });
+  const users = await readCollection('users');
+  const user = users.find(u => u.username === username && u.password === password);
+  if (!user) return res.status(401).json({ error: 'invalid credentials' });
+  res.json({ role: 'student', username: user.username });
 });
 
-// --- Dictionary ---
+// --- SITE CONTENT (text edits, flashcards, etc) ---
+app.get('/api/site-content', async (req, res) => {
+  const items = await readCollection('siteContent');
+  const item = items[0];
+  res.json(item ? item : { content: null });
+});
+
+app.post('/api/site-content', async (req, res) => {
+  const { content } = req.body || {};
+  if (!content) return res.status(400).json({ error: 'content required' });
+  const items = await readCollection('siteContent');
+  if (items.length) {
+    items[0].content = content;
+  } else {
+    items.push({ id: 1, content });
+  }
+  await writeCollection('siteContent', items);
+  res.json({ ok: true });
+});
+
+// --- DICTIONARY ---
 app.get('/api/dictionary', async (req, res) => {
-  const dictionary = await readCollection('dictionary');
-  res.json(dictionary);
+  res.json(await readCollection('dictionary'));
 });
-
 app.post('/api/dictionary', async (req, res) => {
   const { word, definition } = req.body || {};
-  if (!word || !definition) return res.status(400).json({ error: 'word and definition are required' });
-  const dictionary = await readCollection('dictionary');
-  const newItem = { id: nextId(dictionary), word, definition };
-  dictionary.push(newItem);
-  await writeCollection('dictionary', dictionary);
-  res.status(201).json(newItem);
+  if (!word || !definition) return res.status(400).json({ error: 'word and definition required' });
+  const items = await readCollection('dictionary');
+  const item = { id: nextId(items), word, definition };
+  items.push(item);
+  await writeCollection('dictionary', items);
+  res.status(201).json(item);
+});
+app.delete('/api/dictionary/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const items = await readCollection('dictionary');
+  const idx = items.findIndex(x => x.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'not found' });
+  items.splice(idx, 1);
+  await writeCollection('dictionary', items);
+  res.json({ ok: true });
 });
 
-// --- Forum ---
+// --- PHRASES (flashcards) ---
+app.get('/api/phrases', async (req, res) => {
+  res.json(await readCollection('phrases'));
+});
+app.post('/api/phrases', async (req, res) => {
+  const { phrase, meaning } = req.body || {};
+  if (!phrase || !meaning) return res.status(400).json({ error: 'phrase and meaning required' });
+  const items = await readCollection('phrases');
+  const item = { id: nextId(items), phrase, meaning };
+  items.push(item);
+  await writeCollection('phrases', items);
+  res.status(201).json(item);
+});
+app.delete('/api/phrases/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const items = await readCollection('phrases');
+  const idx = items.findIndex(x => x.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'not found' });
+  items.splice(idx, 1);
+  await writeCollection('phrases', items);
+  res.json({ ok: true });
+});
+
+// --- FORUM ---
 app.get('/api/forum/posts', async (req, res) => {
-  const forumPosts = await readCollection('forumPosts');
-  res.json(forumPosts);
+  const posts = await readCollection('forumPosts');
+  const comments = await readCollection('forumComments');
+  const result = posts.map(p => ({
+    ...p,
+    comments: comments.filter(c => c.postId === p.id)
+  }));
+  res.json(result);
 });
-
 app.post('/api/forum/posts', async (req, res) => {
   const { author, title, body } = req.body || {};
-  if (!author || !title || !body) return res.status(400).json({ error: 'author, title and body are required' });
-  const forumPosts = await readCollection('forumPosts');
-  const newPost = { id: nextId(forumPosts), author, title, body, createdAt: new Date().toISOString() };
-  forumPosts.push(newPost);
-  await writeCollection('forumPosts', forumPosts);
-  res.status(201).json(newPost);
+  if (!author || !title || !body) return res.status(400).json({ error: 'author, title and body required' });
+  const posts = await readCollection('forumPosts');
+  const item = { id: nextId(posts), author, title, body, createdAt: new Date().toISOString() };
+  posts.push(item);
+  await writeCollection('forumPosts', posts);
+  res.status(201).json(item);
 });
-
-// --- Text Materials ---
-app.get('/api/text-materials', async (req, res) => {
-  const textMaterials = await readCollection('textMaterials');
-  res.json(textMaterials);
+app.delete('/api/forum/posts/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const posts = await readCollection('forumPosts');
+  const idx = posts.findIndex(x => x.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'not found' });
+  posts.splice(idx, 1);
+  await writeCollection('forumPosts', posts);
+  res.json({ ok: true });
 });
-
-app.post('/api/text-materials', async (req, res) => {
-  const { title, content } = req.body || {};
-  if (!title || content === undefined) return res.status(400).json({ error: 'title and content are required' });
-  const textMaterials = await readCollection('textMaterials');
-  const item = { id: nextId(textMaterials), title, content, createdAt: new Date().toISOString() };
-  textMaterials.push(item);
-  await writeCollection('textMaterials', textMaterials);
+app.post('/api/forum/posts/:id/comments', async (req, res) => {
+  const postId = parseInt(req.params.id);
+  const { author, text } = req.body || {};
+  if (!author || !text) return res.status(400).json({ error: 'author and text required' });
+  const comments = await readCollection('forumComments');
+  const item = { id: nextId(comments), postId, author, text, createdAt: new Date().toISOString() };
+  comments.push(item);
+  await writeCollection('forumComments', comments);
   res.status(201).json(item);
 });
 
-app.delete('/api/text-materials/:id', async (req, res) => {
-  const textMaterials = await readCollection('textMaterials');
-  const id = parseInt(req.params.id, 10);
-  const idx = textMaterials.findIndex(t => t.id === id);
-  if (idx === -1) return res.status(404).json({ error: 'Not found' });
-  textMaterials.splice(idx, 1);
-  await writeCollection('textMaterials', textMaterials);
-  res.json({ ok: true });
-});
-
-// --- Materials ---
+// --- MATERIALS ---
 app.get('/api/materials', async (req, res) => {
-  const materials = await readCollection('materials');
-  res.json(materials);
+  res.json(await readCollection('materials'));
 });
-
 app.post('/api/materials/upload', uploadMaterial.single('file'), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'File is required' });
+    if (!req.file) return res.status(400).json({ error: 'file required' });
     const { title, originalFilename } = req.body || {};
-    if (!title || !title.trim()) return res.status(400).json({ error: 'title is required' });
+    if (!title) return res.status(400).json({ error: 'title required' });
     const displayName = (originalFilename && originalFilename.trim()) ? originalFilename.trim() : req.file.originalname;
     const fileUrl = '/' + path.join('uploads', 'materials', req.file.filename).replace(/\\/g, '/');
-    const materials = await readCollection('materials');
-    const item = { id: nextId(materials), title: title.trim(), type: 'file', originalName: displayName, fileUrl, createdAt: new Date().toISOString() };
-    materials.push(item);
-    await writeCollection('materials', materials);
+    const items = await readCollection('materials');
+    const item = { id: nextId(items), title: title.trim(), type: 'file', originalName: displayName, fileUrl, createdAt: new Date().toISOString() };
+    items.push(item);
+    await writeCollection('materials', items);
     res.status(201).json(item);
   } catch (e) {
-    console.error('Materials upload error', e);
-    res.status(500).json({ error: 'Upload failed' });
+    res.status(500).json({ error: 'upload failed' });
   }
 });
-
 app.post('/api/materials/youtube', async (req, res) => {
   const { title, url } = req.body || {};
-  if (!title || !url) return res.status(400).json({ error: 'title and url are required' });
-  const materials = await readCollection('materials');
-  const item = { id: nextId(materials), title: title.trim(), type: 'youtube', url: url.trim(), createdAt: new Date().toISOString() };
-  materials.push(item);
-  await writeCollection('materials', materials);
+  if (!title || !url) return res.status(400).json({ error: 'title and url required' });
+  const items = await readCollection('materials');
+  const item = { id: nextId(items), title: title.trim(), type: 'youtube', url: url.trim(), createdAt: new Date().toISOString() };
+  items.push(item);
+  await writeCollection('materials', items);
   res.status(201).json(item);
 });
-
 app.delete('/api/materials/:id', async (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  const materials = await readCollection('materials');
-  const idx = materials.findIndex((m) => m.id === id);
-  if (idx === -1) return res.status(404).json({ error: 'Not found' });
-  materials.splice(idx, 1);
-  await writeCollection('materials', materials);
+  const id = parseInt(req.params.id);
+  const items = await readCollection('materials');
+  const idx = items.findIndex(x => x.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'not found' });
+  items.splice(idx, 1);
+  await writeCollection('materials', items);
   res.json({ ok: true });
 });
 
-// --- Assignment Submissions ---
+// --- ASSIGNMENTS ---
 app.get('/api/assignments/submissions', async (req, res) => {
-  const submissions = await readCollection('assignmentSubmissions');
-  res.json(submissions);
+  res.json(await readCollection('assignmentSubmissions'));
 });
-
 app.post('/api/assignments/upload', upload.single('file'), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'File is required' });
+    if (!req.file) return res.status(400).json({ error: 'file required' });
     const { title, author, originalFilename } = req.body || {};
-    if (!title || !author) return res.status(400).json({ error: 'title and author are required' });
+    if (!title || !author) return res.status(400).json({ error: 'title and author required' });
     const displayName = (originalFilename && originalFilename.trim()) ? originalFilename.trim() : req.file.originalname;
     const fileUrl = '/' + path.join('uploads', 'assignments', req.file.filename).replace(/\\/g, '/');
-    const submissions = await readCollection('assignmentSubmissions');
-    const item = { id: nextId(submissions), title, author, originalName: displayName, fileUrl, createdAt: new Date().toISOString() };
-    submissions.push(item);
-    await writeCollection('assignmentSubmissions', submissions);
+    const items = await readCollection('assignmentSubmissions');
+    const item = { id: nextId(items), title, author, originalName: displayName, fileUrl, createdAt: new Date().toISOString() };
+    items.push(item);
+    await writeCollection('assignmentSubmissions', items);
     res.status(201).json(item);
   } catch (e) {
-    console.error('Upload error', e);
-    res.status(500).json({ error: 'Upload failed' });
+    res.status(500).json({ error: 'upload failed' });
   }
 });
-
-// --- Students ---
-app.get('/api/students', async (req, res) => {
-  const students = await readCollection('students');
-  res.json(students);
-});
-
-app.post('/api/students', async (req, res) => {
-  const { name, group } = req.body || {};
-  if (!name) return res.status(400).json({ error: 'name is required' });
-  const students = await readCollection('students');
-  const item = { id: nextId(students), name, group: group || '', createdAt: new Date().toISOString() };
-  students.push(item);
-  await writeCollection('students', students);
-  res.status(201).json(item);
-});
-
-app.delete('/api/students/:id', async (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  const students = await readCollection('students');
-  const idx = students.findIndex(s => s.id === id);
-  if (idx === -1) return res.status(404).json({ error: 'Not found' });
-  students.splice(idx, 1);
-  await writeCollection('students', students);
+app.delete('/api/assignments/submissions/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const items = await readCollection('assignmentSubmissions');
+  const idx = items.findIndex(x => x.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'not found' });
+  items.splice(idx, 1);
+  await writeCollection('assignmentSubmissions', items);
   res.json({ ok: true });
 });
 
-// --- Grades ---
-app.get('/api/grades', async (req, res) => {
-  const grades = await readCollection('grades');
-  res.json(grades);
-});
-
-app.post('/api/grades', async (req, res) => {
-  const { studentId, subject, grade } = req.body || {};
-  if (!studentId || !subject || grade === undefined) return res.status(400).json({ error: 'studentId, subject and grade are required' });
-  const grades = await readCollection('grades');
-  const item = { id: nextId(grades), studentId, subject, grade, createdAt: new Date().toISOString() };
-  grades.push(item);
-  await writeCollection('grades', grades);
-  res.status(201).json(item);
-});
-
-// --- Manual Journal ---
-app.get('/api/manual-journal', async (req, res) => {
-  const manualJournal = await readCollection('manualJournal');
-  res.json(manualJournal);
-});
-
-app.post('/api/manual-journal', async (req, res) => {
-  const { studentId, date, status } = req.body || {};
-  if (!studentId || !date || !status) return res.status(400).json({ error: 'studentId, date and status are required' });
-  const manualJournal = await readCollection('manualJournal');
-  const item = { id: nextId(manualJournal), studentId, date, status, createdAt: new Date().toISOString() };
-  manualJournal.push(item);
-  await writeCollection('manualJournal', manualJournal);
-  res.status(201).json(item);
-});
-
-// --- Notifications ---
-app.get('/api/notifications', async (req, res) => {
-  const notifications = await readCollection('notifications');
-  res.json(notifications);
-});
-
-app.post('/api/notifications', async (req, res) => {
-  const { message } = req.body || {};
-  if (!message) return res.status(400).json({ error: 'message is required' });
-  const notifications = await readCollection('notifications');
-  const item = { id: nextId(notifications), message, createdAt: new Date().toISOString() };
-  notifications.push(item);
-  await writeCollection('notifications', notifications);
-  res.status(201).json(item);
-});
-
-// --- Quizzes ---
+// --- QUIZZES ---
 app.get('/api/quizzes', async (req, res) => {
-  const quizzes = await readCollection('quizzes');
-  res.json(quizzes);
+  res.json(await readCollection('quizzes'));
 });
-
 app.post('/api/quizzes', async (req, res) => {
   const { title, questions } = req.body || {};
-  if (!title || !questions) return res.status(400).json({ error: 'title and questions are required' });
-  const quizzes = await readCollection('quizzes');
-  const item = { id: nextId(quizzes), title, questions, createdAt: new Date().toISOString() };
-  quizzes.push(item);
-  await writeCollection('quizzes', quizzes);
+  if (!title || !questions) return res.status(400).json({ error: 'title and questions required' });
+  const items = await readCollection('quizzes');
+  const item = { id: nextId(items), title, questions, createdAt: new Date().toISOString() };
+  items.push(item);
+  await writeCollection('quizzes', items);
+  res.status(201).json(item);
+});
+app.delete('/api/quizzes/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const items = await readCollection('quizzes');
+  const idx = items.findIndex(x => x.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'not found' });
+  items.splice(idx, 1);
+  await writeCollection('quizzes', items);
+  res.json({ ok: true });
+});
+
+// --- QUIZ ATTEMPTS ---
+app.get('/api/quiz-attempts', async (req, res) => {
+  res.json(await readCollection('quizAttempts'));
+});
+app.post('/api/quiz-attempts', async (req, res) => {
+  const { quizId, user, score, total } = req.body || {};
+  const items = await readCollection('quizAttempts');
+  const item = { id: nextId(items), quizId, user, score, total, createdAt: new Date().toISOString() };
+  items.push(item);
+  await writeCollection('quizAttempts', items);
   res.status(201).json(item);
 });
 
-// --- Edit Tasks ---
+// --- NOTIFICATIONS ---
+app.get('/api/notifications', async (req, res) => {
+  const user = req.query.user || 'all';
+  const items = await readCollection('notifications');
+  res.json(items.filter(n => n.user === user || n.user === 'all'));
+});
+app.post('/api/notifications', async (req, res) => {
+  const { user, kind, message } = req.body || {};
+  const items = await readCollection('notifications');
+  const item = { id: nextId(items), user: user || 'all', kind, message, read: false, createdAt: new Date().toISOString() };
+  items.push(item);
+  await writeCollection('notifications', items);
+  res.status(201).json(item);
+});
+app.patch('/api/notifications/:id/read', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const items = await readCollection('notifications');
+  const item = items.find(x => x.id === id);
+  if (!item) return res.status(404).json({ error: 'not found' });
+  item.read = true;
+  await writeCollection('notifications', items);
+  res.json({ ok: true });
+});
+
+// --- STUDENTS ---
+app.get('/api/students', async (req, res) => {
+  res.json(await readCollection('students'));
+});
+app.post('/api/students', async (req, res) => {
+  const { name } = req.body || {};
+  if (!name) return res.status(400).json({ error: 'name required' });
+  const items = await readCollection('students');
+  if (items.find(s => s.name === name)) return res.json(items.find(s => s.name === name));
+  const item = { id: nextId(items), name, createdAt: new Date().toISOString() };
+  items.push(item);
+  await writeCollection('students', items);
+  res.status(201).json(item);
+});
+app.delete('/api/students/:name', async (req, res) => {
+  const name = decodeURIComponent(req.params.name);
+  const items = await readCollection('students');
+  const idx = items.findIndex(s => s.name === name);
+  if (idx === -1) return res.status(404).json({ error: 'not found' });
+  items.splice(idx, 1);
+  await writeCollection('students', items);
+  res.json({ ok: true });
+});
+
+// --- GRADES ---
+app.get('/api/grades', async (req, res) => {
+  res.json(await readCollection('grades'));
+});
+app.post('/api/grades', async (req, res) => {
+  const { user, score, note } = req.body || {};
+  if (!user) return res.status(400).json({ error: 'user required' });
+  const items = await readCollection('grades');
+  const idx = items.findIndex(x => x.user === user);
+  if (idx !== -1) {
+    items[idx] = { ...items[idx], score, note };
+  } else {
+    items.push({ id: nextId(items), user, score, note });
+  }
+  await writeCollection('grades', items);
+  res.json({ ok: true });
+});
+
+// --- STUDENT GROUPS ---
+app.get('/api/student-groups', async (req, res) => {
+  res.json(await readCollection('studentGroups'));
+});
+app.post('/api/student-groups', async (req, res) => {
+  const { user, group } = req.body || {};
+  if (!user) return res.status(400).json({ error: 'user required' });
+  const items = await readCollection('studentGroups');
+  const idx = items.findIndex(x => x.user === user);
+  if (idx !== -1) {
+    items[idx].group = group;
+  } else {
+    items.push({ id: nextId(items), user, group });
+  }
+  await writeCollection('studentGroups', items);
+  res.json({ ok: true });
+});
+
+// --- MANUAL JOURNAL ---
+app.get('/api/manual-journal', async (req, res) => {
+  res.json(await readCollection('manualJournal'));
+});
+app.post('/api/manual-journal', async (req, res) => {
+  const payload = req.body || {};
+  if (!payload.studentName) return res.status(400).json({ error: 'studentName required' });
+  const items = await readCollection('manualJournal');
+  const item = { id: nextId(items), ...payload, createdAt: new Date().toISOString() };
+  items.push(item);
+  await writeCollection('manualJournal', items);
+  res.status(201).json(item);
+});
+app.put('/api/manual-journal/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const items = await readCollection('manualJournal');
+  const idx = items.findIndex(x => x.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'not found' });
+  items[idx] = { ...items[idx], ...req.body };
+  await writeCollection('manualJournal', items);
+  res.json({ ok: true });
+});
+app.delete('/api/manual-journal/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const items = await readCollection('manualJournal');
+  const idx = items.findIndex(x => x.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'not found' });
+  items.splice(idx, 1);
+  await writeCollection('manualJournal', items);
+  res.json({ ok: true });
+});
+
+// --- EDIT TASKS ---
 app.get('/api/edit-tasks', async (req, res) => {
-  const editTasks = await readCollection('editTasks');
-  res.json(editTasks);
+  res.json(await readCollection('editTasks'));
+});
+app.post('/api/edit-tasks', async (req, res) => {
+  const { title, instructions, sourceText, correctText, createdBy } = req.body || {};
+  if (!title || !sourceText) return res.status(400).json({ error: 'title and sourceText required' });
+  const items = await readCollection('editTasks');
+  const item = { id: nextId(items), title, instructions, sourceText, correctText, createdBy, createdAt: new Date().toISOString() };
+  items.push(item);
+  await writeCollection('editTasks', items);
+  res.status(201).json(item);
+});
+app.delete('/api/edit-tasks/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const items = await readCollection('editTasks');
+  const idx = items.findIndex(x => x.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'not found' });
+  items.splice(idx, 1);
+  await writeCollection('editTasks', items);
+  res.json({ ok: true });
 });
 
-app.post('/api/edit-tasks', async (req, res) => {
-  const { title, content } = req.body || {};
-  if (!title || !content) return res.status(400).json({ error: 'title and content are required' });
-  const editTasks = await readCollection('editTasks');
-  const item = { id: nextId(editTasks), title, content, createdAt: new Date().toISOString() };
-  editTasks.push(item);
-  await writeCollection('editTasks', editTasks);
+// --- EDIT SUBMISSIONS ---
+app.get('/api/edit-submissions', async (req, res) => {
+  res.json(await readCollection('editSubmissions'));
+});
+app.post('/api/edit-submissions', async (req, res) => {
+  const { taskId, student, text } = req.body || {};
+  if (!taskId || !student || !text) return res.status(400).json({ error: 'taskId, student and text required' });
+  const tasks = await readCollection('editTasks');
+  const task = tasks.find(t => t.id === taskId);
+  let autoStatus = 'unchecked';
+  if (task && task.correctText) {
+    autoStatus = text.trim() === task.correctText.trim() ? 'correct' : 'incorrect';
+  }
+  const items = await readCollection('editSubmissions');
+  const item = { id: nextId(items), taskId, student, text, autoStatus, teacherStatus: null, teacherNote: '', score: 0, createdAt: new Date().toISOString() };
+  items.push(item);
+  await writeCollection('editSubmissions', items);
   res.status(201).json(item);
+});
+app.patch('/api/edit-submissions/:id/review', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { teacherStatus, teacherNote, score } = req.body || {};
+  const items = await readCollection('editSubmissions');
+  const idx = items.findIndex(x => x.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'not found' });
+  items[idx] = { ...items[idx], teacherStatus, teacherNote, score };
+  await writeCollection('editSubmissions', items);
+  res.json({ ok: true });
+});
+
+// --- TEXT MATERIALS ---
+app.get('/api/text-materials', async (req, res) => {
+  res.json(await readCollection('textMaterials'));
+});
+app.post('/api/text-materials', async (req, res) => {
+  const { title, content } = req.body || {};
+  if (!title || content === undefined) return res.status(400).json({ error: 'title and content required' });
+  const items = await readCollection('textMaterials');
+  const item = { id: nextId(items), title, content, createdAt: new Date().toISOString() };
+  items.push(item);
+  await writeCollection('textMaterials', items);
+  res.status(201).json(item);
+});
+app.delete('/api/text-materials/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const items = await readCollection('textMaterials');
+  const idx = items.findIndex(x => x.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'not found' });
+  items.splice(idx, 1);
+  await writeCollection('textMaterials', items);
+  res.json({ ok: true });
 });
 
 app.listen(PORT, () => {
