@@ -350,6 +350,77 @@
         .grade-toast-body  { font-size:0.88rem; opacity:0.9; }
         .grade-toast-close { position:absolute; top:8px; right:10px; background:transparent; border:none; color:#fff; cursor:pointer; font-size:1rem; opacity:0.7; }
 
+        /* ── WELCOME / ABOUT MODAL ── */
+        .welcome-overlay {
+            display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+            background:rgba(15,23,42,0.88); z-index:4000;
+            align-items:center; justify-content:center;
+            backdrop-filter:blur(12px);
+            animation:fadeIn 0.4s ease-out;
+        }
+        .welcome-overlay.open { display:flex; }
+        .welcome-modal {
+            background:var(--white); border-radius:20px;
+            width:100%; max-width:520px; margin:16px;
+            box-shadow:0 32px 80px rgba(0,0,0,0.35);
+            border:1px solid var(--border);
+            overflow:hidden; position:relative;
+        }
+        .welcome-banner {
+            background:linear-gradient(135deg,var(--primary),var(--primary-light));
+            padding:28px 28px 20px; text-align:center; position:relative;
+        }
+        .welcome-banner::after {
+            content:''; position:absolute; bottom:-1px; left:0; right:0;
+            height:24px; background:var(--white);
+            border-radius:20px 20px 0 0;
+        }
+        .welcome-photo {
+            width:90px; height:90px; border-radius:50%;
+            border:4px solid var(--accent);
+            object-fit:cover; margin:0 auto 12px;
+            display:block; box-shadow:0 8px 24px rgba(0,0,0,0.3);
+        }
+        .welcome-photo-placeholder {
+            width:90px; height:90px; border-radius:50%;
+            border:4px solid var(--accent);
+            background:rgba(255,255,255,0.15);
+            display:flex; align-items:center; justify-content:center;
+            margin:0 auto 12px; font-size:2.2rem;
+        }
+        .welcome-name {
+            color:#fff; font-size:1.3rem; font-weight:800;
+            font-family:Georgia,serif;
+        }
+        .welcome-tagline { color:rgba(255,255,255,0.8); font-size:0.88rem; margin-top:4px; }
+        .welcome-body { padding:24px 28px 28px; }
+        .welcome-bio {
+            font-family:Georgia,serif; font-size:1rem; line-height:1.8;
+            color:var(--text-main); white-space:pre-wrap;
+            max-height:180px; overflow-y:auto;
+        }
+        .welcome-bio:empty::before { content:'ბიოგრაფია ჯერ არ არის.'; color:var(--text-muted); font-style:italic; }
+        .welcome-actions { display:flex; gap:10px; margin-top:20px; }
+        .welcome-close-btn {
+            background:transparent; border:2px solid var(--border);
+            color:var(--text-muted); border-radius:10px; padding:10px 16px;
+            cursor:pointer; font-weight:600; font-size:0.9rem; flex:1;
+        }
+        .welcome-close-btn:hover { border-color:var(--primary); color:var(--primary); }
+        .welcome-go-btn {
+            background:linear-gradient(to right,var(--primary),var(--primary-light));
+            color:#fff; border:none; border-radius:10px; padding:10px 20px;
+            cursor:pointer; font-weight:700; font-size:0.9rem; flex:2;
+        }
+        .welcome-go-btn:hover { opacity:0.9; }
+        .welcome-skip {
+            position:absolute; top:12px; right:14px;
+            background:rgba(255,255,255,0.15); border:none;
+            color:#fff; border-radius:999px; width:28px; height:28px;
+            cursor:pointer; font-size:1rem; display:flex;
+            align-items:center; justify-content:center;
+        }
+
         @media(max-width:900px) {
             nav { padding:0 4%; height:64px; }
             .nav-right { display:none; }
@@ -359,6 +430,33 @@
     </style>
 </head>
 <body>
+
+<!-- ═══ WELCOME / ABOUT MODAL ═══ -->
+<div class="welcome-overlay" id="welcomeModal">
+    <div class="welcome-modal">
+        <div class="welcome-banner">
+            <button class="welcome-skip" onclick="closeWelcomeModal()" title="გამოტოვება">&times;</button>
+            <div id="welcomePhotoWrap">
+                <div class="welcome-photo-placeholder">👨‍🏫</div>
+            </div>
+            <div class="welcome-name" id="welcomeName">გონიერსა მწვრთნელი უყვარს</div>
+            <div class="welcome-tagline">ქართული ენისა და ლიტერატურის პლატფორმა</div>
+        </div>
+        <div class="welcome-body">
+            <div class="welcome-bio" id="welcomeBio"></div>
+            <div class="welcome-actions">
+                <button class="welcome-close-btn" onclick="closeWelcomeModal()">გამოტოვება</button>
+                <button class="welcome-go-btn" onclick="closeWelcomeModal();switchTab('about')">
+                    <i class="fa-solid fa-arrow-right"></i> სრულად ნახვა
+                </button>
+            </div>
+            <p style="text-align:center;margin-top:14px;font-size:0.78rem;color:var(--text-muted);">
+                <input type="checkbox" id="welcomeDontShow" style="width:auto;margin:0 5px 0 0;vertical-align:middle;">
+                აღარ მაჩვენო
+            </p>
+        </div>
+    </div>
+</div>
 
 <!-- ═══ AUTH MODAL ═══ -->
 <div class="modal-overlay" id="authModal">
@@ -482,9 +580,13 @@
             <button class="nav-group-btn" onclick="toggleDropdown(this)"><i class="fa-solid fa-comments"></i> ფორუმი <i class="fa-solid fa-chevron-down chevron"></i></button>
             <div class="nav-dropdown">
                 <button onclick="closeDropdowns();switchTab('forum')"><i class="fa-solid fa-comments"></i> დისკუსია</button>
-                <button onclick="closeDropdowns();switchTab('about')"><i class="fa-solid fa-circle-info"></i> ჩვენს შესახებ</button>
             </div>
         </div>
+
+        <!-- ჩვენს შესახებ -->
+        <button class="nav-group-btn" onclick="switchTab('about')">
+            <i class="fa-solid fa-circle-info"></i> ჩვენს შესახებ
+        </button>
 
         <!-- პროფილი (student only) -->
         <button class="nav-group-btn student-only" onclick="switchTab('profile')" style="display:none;">
@@ -550,7 +652,6 @@
         <div class="mobile-menu-label">სხვა</div>
         <button class="mobile-menu-item" onclick="mobileNav('forum')"><i class="fa-solid fa-comments"></i> ფორუმი</button>
         <button class="mobile-menu-item" onclick="mobileNav('about')"><i class="fa-solid fa-circle-info"></i> ჩვენს შესახებ</button>
-        <button class="mobile-menu-item" onclick="mobileNav('notifications')"><i class="fa-solid fa-bell"></i> შეტყობინებები <span id="mobileNotifBadge" style="display:none;background:#ef4444;color:#fff;border-radius:999px;padding:1px 7px;font-size:0.72rem;margin-left:4px;">0</span></button>
         <button class="mobile-menu-item student-only" onclick="mobileNav('profile')" style="display:none;"><i class="fa-solid fa-user"></i> პროფილი</button>
         <button class="mobile-menu-item teacher-only" onclick="mobileNav('teacherPanel')" style="display:none;"><i class="fa-solid fa-table-list"></i> ჟურნალი</button>
         <button class="mobile-menu-item teacher-only" onclick="mobileNav('studentActivity')" style="display:none;"><i class="fa-solid fa-users"></i> მოსწავლეები</button>
@@ -1095,6 +1196,7 @@ async function login() {
         closeAuth();
         showToast('მოგესალმებით, ' + currentUser + ' ✓');
         loadNotifications();
+        maybeShowWelcomeModal();
         if (!isAdmin) startActivityPing();
         // register student automatically in students collection
         if (!isAdmin) {
@@ -1510,8 +1612,37 @@ async function uploadAboutPhoto() {
 }
 
 /* ═══════════════════════════════════════════════════
-   DICTIONARY
+   WELCOME MODAL
 ═══════════════════════════════════════════════════ */
+async function maybeShowWelcomeModal() {
+    // don't show to teacher or if user checked "აღარ მაჩვენო"
+    if (isAdmin) return;
+    if (localStorage.getItem('goniursa_welcome_seen') === 'yes') return;
+    try {
+        const resp = await fetch('/api/about');
+        const data = resp.ok ? await resp.json() : {};
+        // only show if teacher has filled in bio or photo
+        if (!data.bio && !data.photoUrl) return;
+        // fill modal
+        const photoWrap = document.getElementById('welcomePhotoWrap');
+        if (data.photoUrl && photoWrap) {
+            photoWrap.innerHTML = `<img src="${escapeHtml(data.photoUrl)}" class="welcome-photo" alt="მასწავლებელი">`;
+        }
+        const bioEl = document.getElementById('welcomeBio');
+        if (bioEl) bioEl.textContent = data.bio || '';
+        // show after short delay
+        setTimeout(() => {
+            document.getElementById('welcomeModal').classList.add('open');
+        }, 800);
+    } catch (e) {}
+}
+
+function closeWelcomeModal() {
+    document.getElementById('welcomeModal').classList.remove('open');
+    if (document.getElementById('welcomeDontShow').checked) {
+        localStorage.setItem('goniursa_welcome_seen', 'yes');
+    }
+}
 async function loadDictionary() {
     const list = document.getElementById('dictList');
     if (!list) return;
@@ -2199,6 +2330,7 @@ window.onload = async function() {
     loadPhrases();
     loadMaterials();
     loadNotifications();
+    maybeShowWelcomeModal();
 
     // warm search cache in background
     setTimeout(() => buildSearchCache().catch(() => {}), 2000);
