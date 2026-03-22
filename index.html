@@ -243,8 +243,117 @@
         .footer-tagline { color:var(--text-muted); font-size:0.9rem; margin-bottom:16px; }
         .footer-copy { color:var(--text-muted); font-size:0.8rem; }
 
+        /* ── HAMBURGER / MOBILE NAV ── */
+        .hamburger {
+            display:none; flex-direction:column; justify-content:center; gap:5px;
+            width:40px; height:40px; background:transparent; border:none;
+            cursor:pointer; padding:6px; border-radius:8px;
+        }
+        .hamburger span {
+            display:block; height:2px; background:var(--accent);
+            border-radius:2px; transition:all 0.3s ease;
+        }
+        .hamburger.open span:nth-child(1) { transform:translateY(7px) rotate(45deg); }
+        .hamburger.open span:nth-child(2) { opacity:0; }
+        .hamburger.open span:nth-child(3) { transform:translateY(-7px) rotate(-45deg); }
+
+        .mobile-menu {
+            display:none; position:fixed; top:64px; left:0; right:0; bottom:0;
+            background:rgba(20,3,10,0.98); z-index:999; overflow-y:auto;
+            padding:16px 6% 40px; flex-direction:column; gap:4px;
+        }
+        .mobile-menu.open { display:flex; }
+        .mobile-menu-section { margin-bottom:8px; }
+        .mobile-menu-label {
+            font-size:0.72rem; text-transform:uppercase; letter-spacing:0.1em;
+            color:rgba(250,204,21,0.5); padding:10px 12px 4px; font-weight:700;
+        }
+        .mobile-menu-item {
+            display:flex; align-items:center; gap:12px;
+            width:100%; background:transparent; border:none;
+            color:#e5e7eb; padding:13px 14px; cursor:pointer;
+            font-size:0.97rem; font-weight:500; text-align:left;
+            border-radius:10px;
+        }
+        .mobile-menu-item:hover, .mobile-menu-item:active {
+            background:rgba(250,204,21,0.1); color:var(--accent);
+        }
+        .mobile-menu-item i { width:20px; text-align:center; color:var(--accent); font-size:1rem; }
+        .mobile-menu-divider { height:1px; background:rgba(250,204,21,0.1); margin:8px 0; }
+        .mobile-auth-row {
+            display:flex; gap:10px; margin-top:16px; padding-top:16px;
+            border-top:1px solid rgba(250,204,21,0.15); align-items:center;
+        }
+
+        /* ── GLOBAL SEARCH OVERLAY ── */
+        .search-overlay {
+            display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+            background:rgba(15,23,42,0.92); z-index:3000;
+            align-items:flex-start; justify-content:center;
+            padding-top:80px; backdrop-filter:blur(12px);
+        }
+        .search-overlay.open { display:flex; }
+        .search-box {
+            background:var(--white); border-radius:16px; width:100%;
+            max-width:640px; box-shadow:var(--shadow-soft);
+            overflow:hidden; margin:0 16px;
+        }
+        .search-input-wrap {
+            display:flex; align-items:center; gap:12px; padding:16px 20px;
+            border-bottom:1px solid var(--border);
+        }
+        .search-input-wrap i { color:var(--text-muted); font-size:1.1rem; }
+        .search-input-wrap input {
+            flex:1; border:none; outline:none; font-size:1.1rem;
+            color:var(--text-main); background:transparent; margin:0; padding:0;
+        }
+        .search-close-btn {
+            background:transparent; border:none; color:var(--text-muted);
+            cursor:pointer; font-size:1.3rem; padding:4px;
+        }
+        .search-results { max-height:420px; overflow-y:auto; padding:8px 0; }
+        .search-result-item {
+            display:flex; align-items:center; gap:14px;
+            padding:12px 20px; cursor:pointer; transition:background 0.15s;
+        }
+        .search-result-item:hover { background:var(--primary-soft); }
+        .search-result-icon {
+            width:36px; height:36px; border-radius:8px; flex-shrink:0;
+            background:linear-gradient(135deg,var(--primary-light),var(--primary));
+            display:flex; align-items:center; justify-content:center;
+            color:white; font-size:0.9rem;
+        }
+        .search-result-title { font-weight:600; color:var(--text-main); font-size:0.95rem; }
+        .search-result-sub { font-size:0.8rem; color:var(--text-muted); margin-top:2px; }
+        .search-result-tag {
+            margin-left:auto; font-size:0.75rem; padding:3px 8px;
+            border-radius:999px; background:var(--accent-soft);
+            color:var(--primary); font-weight:600; white-space:nowrap;
+        }
+        .search-empty { text-align:center; padding:32px; color:var(--text-muted); }
+
+        /* ── GRADE NOTIFICATION TOAST ── */
+        .grade-toast {
+            position:fixed; bottom:24px; right:24px;
+            background:linear-gradient(135deg,var(--primary),var(--primary-light));
+            color:#fff; padding:16px 20px; border-radius:14px;
+            box-shadow:var(--shadow-soft); z-index:3500;
+            max-width:320px; display:none;
+            animation:slideInRight 0.4s ease-out;
+        }
+        .grade-toast.show { display:block; }
+        @keyframes slideInRight {
+            from { opacity:0; transform:translateX(60px); }
+            to   { opacity:1; transform:translateX(0); }
+        }
+        .grade-toast-title { font-weight:700; font-size:0.95rem; margin-bottom:6px; display:flex; align-items:center; gap:8px; }
+        .grade-toast-body  { font-size:0.88rem; opacity:0.9; }
+        .grade-toast-close { position:absolute; top:8px; right:10px; background:transparent; border:none; color:#fff; cursor:pointer; font-size:1rem; opacity:0.7; }
+
         @media(max-width:900px) {
-            nav { padding:0 4%; height:auto; flex-wrap:wrap; padding-top:8px; padding-bottom:8px; gap:8px; }
+            nav { padding:0 4%; height:64px; }
+            .nav-right { display:none; }
+            .hamburger { display:flex; }
             section { padding:28px 4%; }
         }
     </style>
@@ -393,6 +502,11 @@
             </div>
         </div>
 
+        <!-- search -->
+        <button class="nav-icon-btn" onclick="openSearch()" title="ძიება">
+            <i class="fa-solid fa-magnifying-glass"></i>
+        </button>
+
         <!-- notifications -->
         <button class="nav-icon-btn" onclick="switchTab('notifications')" title="შეტყობინებები">
             <i class="fa-solid fa-bell"></i>
@@ -407,7 +521,68 @@
         <!-- auth -->
         <button class="auth-pill" id="authBtn" onclick="openAuth()">შესვლა</button>
     </div>
+
+    <!-- hamburger (mobile only) -->
+    <button class="hamburger" id="hamburger" onclick="toggleMobileMenu()" aria-label="მენიუ">
+        <span></span><span></span><span></span>
+    </button>
 </nav>
+
+<!-- ═══ MOBILE MENU ═══ -->
+<div class="mobile-menu" id="mobileMenu">
+    <div class="mobile-menu-section">
+        <div class="mobile-menu-label">სწავლა</div>
+        <button class="mobile-menu-item" onclick="mobileNav('materials')"><i class="fa-solid fa-folder-open"></i> მასალები</button>
+        <button class="mobile-menu-item" onclick="mobileNav('media')"><i class="fa-solid fa-film"></i> მედია</button>
+        <button class="mobile-menu-item" onclick="mobileNav('dictionary')"><i class="fa-solid fa-spell-check"></i> ლექსიკონი</button>
+        <button class="mobile-menu-item" onclick="mobileNav('phrases')"><i class="fa-solid fa-comment-dots"></i> ფრაზეოლოგიზმები</button>
+        <button class="mobile-menu-item" onclick="mobileNav('proverbs')"><i class="fa-solid fa-quote-left"></i> ანდაზები</button>
+    </div>
+    <div class="mobile-menu-divider"></div>
+    <div class="mobile-menu-section">
+        <div class="mobile-menu-label">დავალება</div>
+        <button class="mobile-menu-item" onclick="mobileNav('assignments')"><i class="fa-solid fa-file-arrow-up"></i> დავალებები</button>
+        <button class="mobile-menu-item" onclick="mobileNav('editTasks')"><i class="fa-solid fa-highlighter"></i> რედაქტირება</button>
+        <button class="mobile-menu-item" onclick="mobileNav('quizzes')"><i class="fa-solid fa-circle-question"></i> ქვიზები</button>
+    </div>
+    <div class="mobile-menu-divider"></div>
+    <div class="mobile-menu-section">
+        <div class="mobile-menu-label">სხვა</div>
+        <button class="mobile-menu-item" onclick="mobileNav('forum')"><i class="fa-solid fa-comments"></i> ფორუმი</button>
+        <button class="mobile-menu-item" onclick="mobileNav('about')"><i class="fa-solid fa-circle-info"></i> ჩვენს შესახებ</button>
+        <button class="mobile-menu-item" onclick="mobileNav('notifications')"><i class="fa-solid fa-bell"></i> შეტყობინებები <span id="mobileNotifBadge" style="display:none;background:#ef4444;color:#fff;border-radius:999px;padding:1px 7px;font-size:0.72rem;margin-left:4px;">0</span></button>
+        <button class="mobile-menu-item student-only" onclick="mobileNav('profile')" style="display:none;"><i class="fa-solid fa-user"></i> პროფილი</button>
+        <button class="mobile-menu-item teacher-only" onclick="mobileNav('teacherPanel')" style="display:none;"><i class="fa-solid fa-table-list"></i> ჟურნალი</button>
+        <button class="mobile-menu-item teacher-only" onclick="mobileNav('studentActivity')" style="display:none;"><i class="fa-solid fa-users"></i> მოსწავლეები</button>
+    </div>
+    <div class="mobile-menu-divider"></div>
+    <div class="mobile-auth-row">
+        <button class="mobile-menu-item" onclick="openSearch();closeMobileMenu()"><i class="fa-solid fa-magnifying-glass"></i> ძიება</button>
+        <button class="mobile-menu-item" onclick="toggleTheme()"><i class="fa-solid fa-moon" id="themeIconMobile"></i> თემა</button>
+        <button class="auth-pill" onclick="openAuth();closeMobileMenu()" id="authBtnMobile">შესვლა</button>
+    </div>
+</div>
+
+<!-- ═══ SEARCH OVERLAY ═══ -->
+<div class="search-overlay" id="searchOverlay" onclick="handleSearchOverlayClick(event)">
+    <div class="search-box">
+        <div class="search-input-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="searchInput" placeholder="მოძებნეთ მასალა, სიტყვა, ანდაზა..." oninput="runSearch(this.value)" autocomplete="off">
+            <button class="search-close-btn" onclick="closeSearch()">&times;</button>
+        </div>
+        <div class="search-results" id="searchResults">
+            <div class="search-empty"><i class="fa-solid fa-magnifying-glass" style="font-size:2rem;opacity:0.2;display:block;margin-bottom:8px;"></i>დაიწყეთ აკრეფა...</div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ GRADE NOTIFICATION TOAST ═══ -->
+<div class="grade-toast" id="gradeToast">
+    <button class="grade-toast-close" onclick="closeGradeToast()">&times;</button>
+    <div class="grade-toast-title"><i class="fa-solid fa-star"></i> <span id="gradeToastTitle"></span></div>
+    <div class="grade-toast-body" id="gradeToastBody"></div>
+</div>
 
 <!-- ═══ SECTIONS ═══ -->
 <div id="app-content">
@@ -705,13 +880,135 @@ function initials(name) {
 }
 
 /* ═══════════════════════════════════════════════════
-   THEME
+   THEME  (dark mode bug fixed — syncs both icons)
 ═══════════════════════════════════════════════════ */
+function applyTheme(dark) {
+    if (dark) {
+        document.body.classList.add('dark-mode');
+    } else {
+        document.body.classList.remove('dark-mode');
+    }
+    const icon = dark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+    const el1 = document.getElementById('themeIcon');
+    const el2 = document.getElementById('themeIconMobile');
+    if (el1) el1.className = icon;
+    if (el2) el2.className = icon;
+}
 function toggleTheme() {
-    document.body.classList.toggle('dark-mode');
     const isDark = document.body.classList.contains('dark-mode');
-    localStorage.setItem('goniursa_theme', isDark ? 'dark' : 'light');
-    document.getElementById('themeIcon').className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+    applyTheme(!isDark);
+    localStorage.setItem('goniursa_theme', !isDark ? 'dark' : 'light');
+}
+
+/* ═══════════════════════════════════════════════════
+   MOBILE MENU
+═══════════════════════════════════════════════════ */
+function toggleMobileMenu() {
+    const menu = document.getElementById('mobileMenu');
+    const btn  = document.getElementById('hamburger');
+    const open = menu.classList.toggle('open');
+    btn.classList.toggle('open', open);
+    document.body.style.overflow = open ? 'hidden' : '';
+}
+function closeMobileMenu() {
+    document.getElementById('mobileMenu').classList.remove('open');
+    document.getElementById('hamburger').classList.remove('open');
+    document.body.style.overflow = '';
+}
+function mobileNav(tab) {
+    closeMobileMenu();
+    switchTab(tab);
+}
+
+/* ═══════════════════════════════════════════════════
+   GLOBAL SEARCH
+═══════════════════════════════════════════════════ */
+let _searchCache = null;
+async function buildSearchCache() {
+    if (_searchCache) return _searchCache;
+    const [dict, phrases, proverbs, materials] = await Promise.all([
+        fetch('/api/dictionary').then(r => r.ok ? r.json() : []),
+        fetch('/api/phrases').then(r => r.ok ? r.json() : []),
+        fetch('/api/proverbs').then(r => r.ok ? r.json() : []),
+        fetch('/api/materials').then(r => r.ok ? r.json() : [])
+    ]);
+    _searchCache = [
+        ...dict.map(x => ({ title: x.word, sub: x.definition, tab: 'dictionary', icon: 'fa-spell-check', tag: 'ლექსიკონი' })),
+        ...phrases.map(x => ({ title: x.phrase, sub: x.meaning, tab: 'phrases', icon: 'fa-comment-dots', tag: 'ფრაზეოლოგიზმი' })),
+        ...proverbs.map(x => ({ title: x.text, sub: x.meaning || x.source, tab: 'proverbs', icon: 'fa-quote-left', tag: 'ანდაზა' })),
+        ...materials.map(x => ({ title: x.title, sub: x.type === 'youtube' ? 'YouTube ვიდეო' : x.originalName || '', tab: 'materials', icon: 'fa-folder-open', tag: 'მასალა' }))
+    ];
+    return _searchCache;
+}
+function openSearch() {
+    document.getElementById('searchOverlay').classList.add('open');
+    setTimeout(() => document.getElementById('searchInput').focus(), 80);
+    buildSearchCache().catch(() => {});
+}
+function closeSearch() {
+    document.getElementById('searchOverlay').classList.remove('open');
+    document.getElementById('searchInput').value = '';
+    document.getElementById('searchResults').innerHTML = '<div class="search-empty"><i class="fa-solid fa-magnifying-glass" style="font-size:2rem;opacity:0.2;display:block;margin-bottom:8px;"></i>დაიწყეთ აკრეფა...</div>';
+}
+function handleSearchOverlayClick(e) {
+    if (e.target === document.getElementById('searchOverlay')) closeSearch();
+}
+async function runSearch(q) {
+    const res = document.getElementById('searchResults');
+    if (!q.trim()) { res.innerHTML = '<div class="search-empty"><i class="fa-solid fa-magnifying-glass" style="font-size:2rem;opacity:0.2;display:block;margin-bottom:8px;"></i>დაიწყეთ აკრეფა...</div>'; return; }
+    const cache = await buildSearchCache();
+    const ql = q.toLowerCase();
+    const hits = cache.filter(x => (x.title||'').toLowerCase().includes(ql) || (x.sub||'').toLowerCase().includes(ql)).slice(0, 12);
+    if (!hits.length) { res.innerHTML = '<div class="search-empty">შედეგი ვერ მოიძებნა</div>'; return; }
+    res.innerHTML = hits.map(h => `
+        <div class="search-result-item" onclick="closeSearch();switchTab('${h.tab}')">
+            <div class="search-result-icon"><i class="fa-solid ${h.icon}"></i></div>
+            <div>
+                <div class="search-result-title">${escapeHtml(h.title)}</div>
+                ${h.sub ? `<div class="search-result-sub">${escapeHtml(h.sub.slice(0,80))}${h.sub.length>80?'…':''}</div>` : ''}
+            </div>
+            <span class="search-result-tag">${h.tag}</span>
+        </div>
+    `).join('');
+}
+// keyboard shortcut Ctrl+K / Cmd+K
+document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); openSearch(); }
+    if (e.key === 'Escape') { closeSearch(); closeMobileMenu(); }
+});
+
+/* ═══════════════════════════════════════════════════
+   GRADE NOTIFICATION TOAST
+═══════════════════════════════════════════════════ */
+let _lastGradeCheck = null;
+function closeGradeToast() {
+    document.getElementById('gradeToast').classList.remove('show');
+}
+async function checkForGradeUpdates() {
+    if (isAdmin || !currentUsername) return;
+    try {
+        const resp = await fetch('/api/grades');
+        const grades = resp.ok ? await resp.json() : [];
+        const mine = grades.find(g => g.user === currentUsername);
+        if (!mine) return;
+        const key = 'grade_seen_' + currentUsername;
+        const seen = localStorage.getItem(key);
+        const sig = JSON.stringify({ score: mine.score, note: mine.note });
+        if (seen !== sig) {
+            localStorage.setItem(key, sig);
+            if (seen !== null) {
+                // grade was updated — show toast
+                const toast = document.getElementById('gradeToast');
+                document.getElementById('gradeToastTitle').textContent = 'მასწავლებელმა შეაფასა!';
+                document.getElementById('gradeToastBody').textContent =
+                    'ქულა: ' + (mine.score || 0) + (mine.note ? '  •  "' + mine.note + '"' : '');
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 7000);
+                // also add to notifications badge
+                loadNotifications();
+            }
+        }
+    } catch (e) {}
 }
 
 /* ═══════════════════════════════════════════════════
@@ -800,6 +1097,8 @@ async function login() {
         if (!isAdmin) startActivityPing();
         // register student automatically in students collection
         if (!isAdmin) {
+            startActivityPing();
+            syncProgressFromDB();
             fetch('/api/students', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: data.username }) }).catch(() => {});
         }
     } catch (e) { alert('შეცდომა!'); }
@@ -815,7 +1114,10 @@ function restoreSession() {
         currentUser = isAdmin ? '👨‍🏫 მასწავლებელი' : '👤 ' + data.username;
         document.getElementById('authBtn').textContent = currentUser + ' (გამოსვლა)';
         updateUIForRole();
-        if (!isAdmin && currentUsername) startActivityPing();
+        if (!isAdmin && currentUsername) {
+            startActivityPing();
+            syncProgressFromDB();
+        }
     } catch (e) {}
 }
 
@@ -827,6 +1129,18 @@ function updateUIForRole() {
     const newPostBox = document.getElementById('newPostBox');
     if (newPostBox) newPostBox.style.display = (currentUser !== 'სტუმარი') ? 'block' : 'none';
     if (!isAdmin && currentUser !== 'სტუმარი') updateProgressUI();
+    // sync mobile auth button
+    const mb = document.getElementById('authBtnMobile');
+    const db = document.getElementById('authBtn');
+    if (mb && db) mb.textContent = db.textContent;
+    // start grade polling for students
+    if (!isAdmin && currentUsername) {
+        checkForGradeUpdates();
+        if (!window._gradePollStarted) {
+            window._gradePollStarted = true;
+            setInterval(checkForGradeUpdates, 60000);
+        }
+    }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -997,18 +1311,53 @@ async function saveGradeFromModal(username) {
 function closeStudentProfile() { document.getElementById('studentProfileModal').style.display = 'none'; }
 
 /* ═══════════════════════════════════════════════════
-   PROGRESS / LEVELS
+   PROGRESS / LEVELS  (DB-synced)
 ═══════════════════════════════════════════════════ */
 function getProgressKey() { if (isAdmin) return null; return 'progress_' + currentUsername; }
-function getProgress() { const k = getProgressKey(); if (!k) return null; return JSON.parse(localStorage.getItem(k) || '{"points":0,"badges":[]}'); }
-function saveProgressLocal(rec) { const k = getProgressKey(); if (!k) return; localStorage.setItem(k, JSON.stringify(rec)); }
-function awardPoints(amount) {
+function getProgress() {
+    const k = getProgressKey(); if (!k) return null;
+    return JSON.parse(localStorage.getItem(k) || '{"points":0,"badges":[]}');
+}
+function saveProgressLocal(rec) {
+    const k = getProgressKey(); if (!k) return;
+    localStorage.setItem(k, JSON.stringify(rec));
+}
+async function syncProgressFromDB() {
+    if (isAdmin || !currentUsername) return;
+    try {
+        const resp = await fetch('/api/progress/' + encodeURIComponent(currentUsername));
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const local = getProgress() || { points: 0, badges: [] };
+        // merge: take whichever has more points
+        const merged = {
+            points: Math.max(local.points, data.points || 0),
+            badges: [...new Set([...(local.badges || []), ...(data.badges || [])])]
+        };
+        saveProgressLocal(merged);
+        updateProgressUI();
+        // push merged back to DB
+        await fetch('/api/progress/' + encodeURIComponent(currentUsername), {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(merged)
+        });
+    } catch (e) {}
+}
+async function awardPoints(amount) {
     const rec = getProgress(); if (!rec) return;
     rec.points += amount;
-    if (rec.points >= 30 && !rec.badges.includes('აქტიური')) rec.badges.push('აქტიური');
-    if (rec.points >= 80 && !rec.badges.includes('მცოდნე')) rec.badges.push('მცოდნე');
-    if (rec.points >= 150 && !rec.badges.includes('ოსტატი')) rec.badges.push('ოსტატი');
-    saveProgressLocal(rec); updateProgressUI();
+    if (rec.points >= 30  && !rec.badges.includes('აქტიური'))  rec.badges.push('აქტიური');
+    if (rec.points >= 80  && !rec.badges.includes('მცოდნე'))   rec.badges.push('მცოდნე');
+    if (rec.points >= 150 && !rec.badges.includes('ოსტატი'))   rec.badges.push('ოსტატი');
+    saveProgressLocal(rec);
+    updateProgressUI();
+    // persist to DB
+    if (currentUsername) {
+        fetch('/api/progress/' + encodeURIComponent(currentUsername), {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(rec)
+        }).catch(() => {});
+    }
 }
 function computeLevel(p) {
     if (p >= 200) return 'ოსტატი'; if (p >= 120) return 'მცოდნე მკითხველი';
@@ -1670,6 +2019,8 @@ async function refreshTeacherJournal() {
 }
 async function saveGrade(user, score, note) {
     await fetch('/api/grades', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user, score: Number(score||0), note: note||'' }) });
+    // notify the student
+    await fetch('/api/notifications', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user, kind:'grade', message: 'მასწავლებელმა შეაფასა: ' + Number(score||0) + ' ქულა' + (note ? ' — "' + note + '"' : '') }) }).catch(() => {});
     showToast('შეფასება შენახულია ✓');
 }
 async function saveStudentGroup(user, group) {
@@ -1838,14 +2189,37 @@ document.addEventListener('click', function(e) {
    INIT
 ═══════════════════════════════════════════════════ */
 window.onload = async function() {
-    if (localStorage.getItem('goniursa_theme') === 'dark') toggleTheme();
+    // dark mode — apply before paint to avoid flicker
+    applyTheme(localStorage.getItem('goniursa_theme') === 'dark');
+
     restoreSession();
     updateUIForRole();
     loadDictionary();
     loadPhrases();
     loadMaterials();
     loadNotifications();
+
+    // grade update polling (every 60s for students)
+    if (!isAdmin && currentUsername) {
+        checkForGradeUpdates();
+        setInterval(checkForGradeUpdates, 60000);
+    }
+
+    // warm search cache in background
+    setTimeout(() => buildSearchCache().catch(() => {}), 2000);
 };
+
+// sync auth button text on mobile menu too
+const _origOpenAuth = openAuth;
+function openAuth() {
+    _origOpenAuth();
+    syncMobileAuthBtn();
+}
+function syncMobileAuthBtn() {
+    const mb = document.getElementById('authBtnMobile');
+    const db = document.getElementById('authBtn');
+    if (mb && db) mb.textContent = db.textContent;
+}
 </script>
 </body>
 </html>
