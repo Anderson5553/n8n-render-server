@@ -2630,9 +2630,20 @@ async function addStudentManual() {
     showToast('მოსწავლე დაემატა ✓'); refreshTeacherJournal();
 }
 async function deleteStudentManual(name) {
-    if (!confirm('წავშალო?')) return;
+    if (!confirm('წავშალო ' + name + '?')) return;
+    // delete from students collection
     await fetch('/api/students/' + encodeURIComponent(name), { method: 'DELETE' });
-    showToast('წაიშალა ✓'); refreshTeacherJournal();
+    // also delete from users collection (find by username)
+    try {
+        const resp = await fetch('/api/users/all');
+        const users = resp.ok ? await resp.json() : [];
+        const user = users.find(u => u.username === name);
+        if (user) await fetch('/api/users/' + user.id, { method: 'DELETE' });
+    } catch(e) {}
+    showToast(name + ' წაიშალა ✓');
+    refreshTeacherJournal();
+    loadAllUsers();
+    loadPendingUsers();
 }
 async function loadManualJournal() {
     const el = document.getElementById('manualJournalTable');
