@@ -7,6 +7,7 @@
     <meta name="description" content="ქართული ენისა და ლიტერატურის ინტერაქტიული სასწავლო პლატფორმა">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="/socket.io/socket.io.js"></script>
     <style>
         :root {
             --primary: #4a0e17;
@@ -45,6 +46,122 @@
         }
         * { margin:0; padding:0; box-sizing:border-box; font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Tahoma,sans-serif; transition: background-color 0.25s ease, color 0.25s ease; }
         body { background: var(--bg-gradient); color: var(--text-main); line-height:1.6; min-height:100vh; padding-top:64px; }
+
+        /* ── CHAT ── */
+        .chat-overlay {
+            display:none; position:fixed; bottom:0; right:24px;
+            width:360px; height:520px; z-index:4000;
+            flex-direction:column; border-radius:16px 16px 0 0;
+            box-shadow:0 -8px 40px rgba(0,0,0,0.25);
+            overflow:hidden; border:1px solid var(--border);
+        }
+        .chat-overlay.open { display:flex; }
+        .chat-header {
+            background:linear-gradient(to right,var(--primary),var(--primary-light));
+            color:#fff; padding:12px 16px;
+            display:flex; align-items:center; gap:10px; flex-shrink:0;
+        }
+        .chat-header-title { font-weight:700; font-size:0.95rem; flex:1; }
+        .chat-header-btn {
+            background:rgba(255,255,255,0.15); border:none; color:#fff;
+            border-radius:8px; padding:5px 10px; cursor:pointer; font-size:0.82rem;
+        }
+        .chat-header-btn:hover { background:rgba(255,255,255,0.25); }
+        .chat-tabs {
+            display:flex; background:var(--white);
+            border-bottom:1px solid var(--border); flex-shrink:0;
+        }
+        .chat-tab {
+            flex:1; padding:8px; background:transparent; border:none;
+            font-size:0.82rem; font-weight:600; cursor:pointer;
+            color:var(--text-muted); border-bottom:2px solid transparent;
+        }
+        .chat-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+        .chat-users {
+            background:var(--white); padding:8px;
+            border-bottom:1px solid var(--border); flex-shrink:0;
+            max-height:80px; overflow-y:auto;
+            display:flex; flex-wrap:wrap; gap:6px;
+        }
+        .chat-user-pill {
+            background:var(--primary-soft); border-radius:999px;
+            padding:3px 10px; font-size:0.78rem; cursor:pointer;
+            border:2px solid transparent; font-weight:600; color:var(--primary);
+            display:flex; align-items:center; gap:4px;
+        }
+        .chat-user-pill.selected { border-color:var(--primary); background:var(--primary); color:#fff; }
+        .chat-user-pill .online-dot { width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block; }
+        .chat-messages {
+            flex:1; overflow-y:auto; padding:12px;
+            background:var(--bg-color); display:flex; flex-direction:column; gap:8px;
+        }
+        .chat-msg {
+            max-width:80%; padding:8px 12px; border-radius:12px;
+            font-size:0.88rem; line-height:1.5; word-break:break-word;
+        }
+        .chat-msg.mine {
+            align-self:flex-end;
+            background:linear-gradient(135deg,var(--primary),var(--primary-light));
+            color:#fff; border-radius:12px 12px 4px 12px;
+        }
+        .chat-msg.other {
+            align-self:flex-start;
+            background:var(--white); color:var(--text-main);
+            border:1px solid var(--border); border-radius:12px 12px 12px 4px;
+        }
+        .chat-msg-author { font-size:0.72rem; opacity:0.7; margin-bottom:2px; font-weight:600; }
+        .chat-msg-time { font-size:0.68rem; opacity:0.6; margin-top:3px; text-align:right; }
+        .chat-input-area {
+            display:flex; gap:8px; padding:10px;
+            background:var(--white); border-top:1px solid var(--border); flex-shrink:0;
+        }
+        .chat-input {
+            flex:1; padding:8px 12px; border:1px solid var(--border);
+            border-radius:20px; font-size:0.88rem; outline:none;
+            background:var(--bg-color); color:var(--text-main); margin:0;
+        }
+        .chat-input:focus { border-color:var(--primary); }
+        .chat-send-btn {
+            background:var(--primary); color:#fff; border:none;
+            border-radius:50%; width:36px; height:36px; cursor:pointer;
+            display:flex; align-items:center; justify-content:center; flex-shrink:0;
+        }
+
+        /* ── CALL UI ── */
+        .call-bar {
+            display:none; position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+            background:linear-gradient(135deg,#1e293b,#0f172a);
+            border-radius:16px 16px 0 0; padding:16px 24px;
+            z-index:4500; box-shadow:0 -8px 40px rgba(0,0,0,0.5);
+            color:#fff; align-items:center; gap:16px; min-width:360px;
+        }
+        .call-bar.active { display:flex; }
+        .call-bar-info { flex:1; }
+        .call-bar-title { font-weight:700; font-size:0.95rem; }
+        .call-bar-status { font-size:0.8rem; color:#94a3b8; margin-top:2px; }
+        .call-btn {
+            width:44px; height:44px; border-radius:50%; border:none;
+            cursor:pointer; display:flex; align-items:center; justify-content:center;
+            font-size:1rem;
+        }
+        .call-btn-end { background:#ef4444; color:#fff; }
+        .call-btn-mute { background:rgba(255,255,255,0.1); color:#fff; }
+        .call-btn-mute.muted { background:#f59e0b; }
+
+        /* incoming call modal */
+        .incoming-call {
+            display:none; position:fixed; top:80px; right:24px;
+            background:linear-gradient(135deg,var(--primary),var(--primary-light));
+            color:#fff; border-radius:16px; padding:20px 24px;
+            z-index:5000; box-shadow:0 16px 40px rgba(0,0,0,0.4);
+            min-width:280px; animation:slideInRight 0.4s ease-out;
+        }
+        .incoming-call.show { display:block; }
+        .incoming-call-title { font-weight:700; font-size:1rem; margin-bottom:4px; }
+        .incoming-call-sub { font-size:0.82rem; opacity:0.85; margin-bottom:16px; }
+        .incoming-call-btns { display:flex; gap:10px; }
+        .call-accept-btn { background:#22c55e; color:#fff; border:none; border-radius:10px; padding:10px 20px; cursor:pointer; font-weight:700; flex:1; }
+        .call-decline-btn { background:rgba(255,255,255,0.2); color:#fff; border:none; border-radius:10px; padding:10px 20px; cursor:pointer; font-weight:700; flex:1; }
 
         /* ── BULK SELECT ── */
         .bulk-toolbar {
@@ -712,6 +829,16 @@
             <i class="fa-solid fa-circle-info"></i> ჩვენ შესახებ
         </button>
 
+        <!-- ჩატი (logged in users only) -->
+        <button class="nav-icon-btn student-only" onclick="openChat()" title="ჩატი" id="chatNavBtn" style="display:none;position:relative;">
+            <i class="fa-solid fa-message"></i>
+            <span class="notif-dot" id="chatDot" style="display:none;"></span>
+        </button>
+        <button class="nav-icon-btn teacher-only" onclick="openChat()" title="ჩატი" id="chatNavBtnTeacher" style="display:none;position:relative;">
+            <i class="fa-solid fa-message"></i>
+            <span class="notif-dot" id="chatDotTeacher" style="display:none;"></span>
+        </button>
+
         <!-- პროფილი (student only) -->
         <button class="nav-group-btn student-only" onclick="switchTab('profile')" style="display:none;">
             <i class="fa-solid fa-user"></i> პროფილი
@@ -804,7 +931,54 @@
     </div>
 </div>
 
-<!-- ═══ GRADE NOTIFICATION TOAST ═══ -->
+<!-- ═══ CHAT OVERLAY ═══ -->
+<div class="chat-overlay" id="chatOverlay">
+    <div class="chat-header">
+        <i class="fa-solid fa-message"></i>
+        <span class="chat-header-title" id="chatHeaderTitle">ჩატი</span>
+        <button class="chat-header-btn" id="callStartBtn" onclick="startCall()" title="დარეკვა">
+            <i class="fa-solid fa-phone"></i>
+        </button>
+        <button class="chat-header-btn" onclick="closeChat()">&times;</button>
+    </div>
+    <div class="chat-tabs" id="chatTabsBar">
+        <button class="chat-tab active" onclick="setChatChannel('all',this)">ყველა</button>
+        <button class="chat-tab" id="chatPrivateTab" style="display:none;" onclick="setChatChannel('private',this)">პირადი</button>
+    </div>
+    <div class="chat-users" id="chatUsersList"></div>
+    <div class="chat-messages" id="chatMessages">
+        <div style="text-align:center;color:var(--text-muted);font-size:0.85rem;padding:20px;">შეიყვანეთ შეტყობინება...</div>
+    </div>
+    <div class="chat-input-area">
+        <input class="chat-input" id="chatInput" placeholder="შეტყობინება..." onkeydown="if(event.key==='Enter')sendChatMessage()">
+        <button class="chat-send-btn" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+    </div>
+</div>
+
+<!-- ═══ CALL BAR ═══ -->
+<div class="call-bar" id="callBar">
+    <div class="call-bar-info">
+        <div class="call-bar-title" id="callBarTitle">დარეკვა...</div>
+        <div class="call-bar-status" id="callBarStatus">მოლოდინი...</div>
+    </div>
+    <audio id="remoteAudio" autoplay></audio>
+    <button class="call-btn call-btn-mute" id="muteBtn" onclick="toggleMute()" title="დადუმება">
+        <i class="fa-solid fa-microphone"></i>
+    </button>
+    <button class="call-btn call-btn-end" onclick="endCall()" title="გათიშვა">
+        <i class="fa-solid fa-phone-slash"></i>
+    </button>
+</div>
+
+<!-- ═══ INCOMING CALL ═══ -->
+<div class="incoming-call" id="incomingCall">
+    <div class="incoming-call-title" id="incomingCallTitle">შემომავალი ზარი</div>
+    <div class="incoming-call-sub" id="incomingCallSub">გსურთ პასუხი?</div>
+    <div class="incoming-call-btns">
+        <button class="call-accept-btn" onclick="acceptCall()"><i class="fa-solid fa-phone"></i> პასუხი</button>
+        <button class="call-decline-btn" onclick="declineCall()"><i class="fa-solid fa-phone-slash"></i> უარი</button>
+    </div>
+</div>
 <div class="grade-toast" id="gradeToast">
     <button class="grade-toast-close" onclick="closeGradeToast()">&times;</button>
     <div class="grade-toast-title"><i class="fa-solid fa-star"></i> <span id="gradeToastTitle"></span></div>
@@ -1421,6 +1595,7 @@ async function login() {
         showToast('მოგესალმებით, ' + currentUser + ' ✓');
         loadNotifications();
         maybeShowWelcomeModal();
+        initSocket();
         if (!isAdmin) {
             startActivityPing();
             syncProgressFromDB();
@@ -1465,6 +1640,7 @@ function restoreSession() {
             startActivityPing();
             syncProgressFromDB();
         }
+        initSocket();
     } catch (e) {}
 }
 
@@ -3000,8 +3176,265 @@ document.addEventListener('click', function(e) {
 });
 
 /* ═══════════════════════════════════════════════════
-   INIT
+   CHAT + CALL (Socket.io + WebRTC)
 ═══════════════════════════════════════════════════ */
+let socket = null;
+let chatChannel = 'all';   // 'all' | 'private:username'
+let chatTarget = null;     // username for private
+let onlineUsersList = [];
+let chatMessages = {};     // channel -> [messages]
+
+// WebRTC
+let peerConnection = null;
+let localStream = null;
+let isMuted = false;
+let callTarget = 'all';
+let pendingOffer = null;
+let pendingFrom = null;
+
+const STUN = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
+
+function initSocket() {
+    if (socket) return;
+    socket = io();
+
+    socket.on('connect', () => {
+        if (currentUsername) socket.emit('join', { username: currentUsername });
+    });
+
+    socket.on('users-online', (users) => {
+        onlineUsersList = users.filter(u => u.username !== currentUsername);
+        renderChatUsers();
+    });
+
+    socket.on('chat-message', (msg) => {
+        const ch = msg.channel || 'all';
+        if (!chatMessages[ch]) chatMessages[ch] = [];
+        chatMessages[ch].push(msg);
+        if (document.getElementById('chatOverlay').classList.contains('open') && chatChannel === ch) {
+            appendChatMessage(msg);
+        } else if (!msg.mine) {
+            // show dot
+            document.getElementById('chatDot') && (document.getElementById('chatDot').style.display = 'block');
+            document.getElementById('chatDotTeacher') && (document.getElementById('chatDotTeacher').style.display = 'block');
+        }
+    });
+
+    // WebRTC signaling
+    socket.on('call-invite', async ({ from, callType, offer, channel }) => {
+        pendingOffer = offer;
+        pendingFrom = from;
+        document.getElementById('incomingCallTitle').textContent = from + ' გირეკავს';
+        document.getElementById('incomingCallSub').textContent = channel === 'all' ? 'ჯგუფური ზარი' : 'პირადი ზარი';
+        document.getElementById('incomingCall').classList.add('show');
+    });
+
+    socket.on('call-answer', async ({ from, answer }) => {
+        if (peerConnection) {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+            document.getElementById('callBarStatus').textContent = 'დაკავშირებულია ✓';
+        }
+    });
+
+    socket.on('call-ice', async ({ from, candidate }) => {
+        if (peerConnection && candidate) {
+            try { await peerConnection.addIceCandidate(new RTCIceCandidate(candidate)); } catch(e) {}
+        }
+    });
+
+    socket.on('call-end', ({ from }) => {
+        showToast(from + ' გათიშა ✓');
+        endCall(false);
+    });
+}
+
+/* ── CHAT UI ── */
+function openChat() {
+    initSocket();
+    document.getElementById('chatOverlay').classList.add('open');
+    document.getElementById('chatDot') && (document.getElementById('chatDot').style.display = 'none');
+    document.getElementById('chatDotTeacher') && (document.getElementById('chatDotTeacher').style.display = 'none');
+    renderChatMessages();
+    setTimeout(() => { const el = document.getElementById('chatInput'); if(el) el.focus(); }, 100);
+    // teacher sees call button, students don't
+    const callBtn = document.getElementById('callStartBtn');
+    if (callBtn) callBtn.style.display = isAdmin ? 'block' : 'none';
+}
+
+function closeChat() {
+    document.getElementById('chatOverlay').classList.remove('open');
+}
+
+function setChatChannel(ch, btn) {
+    chatChannel = ch;
+    chatTarget = ch === 'all' ? null : ch.replace('private:', '');
+    document.querySelectorAll('.chat-tab').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    document.getElementById('chatHeaderTitle').textContent = ch === 'all' ? 'ყველა' : '💬 ' + chatTarget;
+    renderChatMessages();
+}
+
+function selectChatUser(username) {
+    const ch = 'private:' + username;
+    chatChannel = ch;
+    chatTarget = username;
+    const privateTab = document.getElementById('chatPrivateTab');
+    if (privateTab) { privateTab.style.display = 'block'; privateTab.textContent = '💬 ' + username; }
+    document.querySelectorAll('.chat-tab').forEach(b => b.classList.remove('active'));
+    if (privateTab) privateTab.classList.add('active');
+    document.getElementById('chatHeaderTitle').textContent = '💬 ' + username;
+    renderChatMessages();
+    document.querySelectorAll('.chat-user-pill').forEach(p => {
+        p.classList.toggle('selected', p.dataset.username === username);
+    });
+}
+
+function renderChatUsers() {
+    const el = document.getElementById('chatUsersList');
+    if (!el) return;
+    // "ყველა" pill
+    let html = `<span class="chat-user-pill ${chatChannel==='all'?'selected':''}" onclick="setChatChannel('all',null);document.querySelectorAll('.chat-user-pill').forEach(p=>p.classList.remove('selected'));this.classList.add('selected')">🌐 ყველა</span>`;
+    html += onlineUsersList.map(u => `
+        <span class="chat-user-pill" data-username="${escapeHtml(u.username)}" onclick="selectChatUser('${escapeHtml(u.username)}')">
+            <span class="online-dot"></span>${escapeHtml(u.username)}
+        </span>`).join('');
+    el.innerHTML = html;
+}
+
+function renderChatMessages() {
+    const el = document.getElementById('chatMessages');
+    if (!el) return;
+    const msgs = chatMessages[chatChannel] || [];
+    if (!msgs.length) {
+        el.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:0.85rem;padding:20px;">შეტყობინება არ არის...</div>';
+        return;
+    }
+    el.innerHTML = msgs.map(m => buildMsgHtml(m)).join('');
+    el.scrollTop = el.scrollHeight;
+}
+
+function appendChatMessage(msg) {
+    const el = document.getElementById('chatMessages');
+    if (!el) return;
+    const empty = el.querySelector('[style*="text-align:center"]');
+    if (empty) empty.remove();
+    el.insertAdjacentHTML('beforeend', buildMsgHtml(msg));
+    el.scrollTop = el.scrollHeight;
+}
+
+function buildMsgHtml(msg) {
+    const mine = msg.mine || msg.from === currentUsername;
+    const time = msg.time ? new Date(msg.time).toLocaleTimeString('ka-GE', {hour:'2-digit',minute:'2-digit'}) : '';
+    return `<div class="chat-msg ${mine?'mine':'other'}">
+        ${!mine ? `<div class="chat-msg-author">${escapeHtml(msg.from)}</div>` : ''}
+        ${escapeHtml(msg.text)}
+        <div class="chat-msg-time">${time}</div>
+    </div>`;
+}
+
+function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input ? input.value.trim() : '';
+    if (!text || !socket) return;
+    if (chatChannel === 'all') {
+        socket.emit('chat-message', { to: 'all', text });
+    } else {
+        socket.emit('chat-message', { to: chatTarget, text });
+    }
+    input.value = '';
+}
+
+/* ── CALL ── */
+async function startCall() {
+    if (!isAdmin) return;
+    // teacher chooses target
+    const users = onlineUsersList.map(u => u.username);
+    const choices = ['ყველა', ...users];
+    const choice = prompt('ვის დაურეკოთ?\n' + choices.map((c,i) => i + ': ' + c).join('\n'));
+    if (choice === null) return;
+    const idx = parseInt(choice);
+    callTarget = idx === 0 ? 'all' : (users[idx-1] || 'all');
+    await initiateCall(callTarget);
+}
+
+async function initiateCall(target) {
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        peerConnection = new RTCPeerConnection(STUN);
+        localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
+        peerConnection.ontrack = e => {
+            const audio = document.getElementById('remoteAudio');
+            if (audio) audio.srcObject = e.streams[0];
+        };
+        peerConnection.onicecandidate = e => {
+            if (e.candidate) socket.emit('call-ice', { to: target, candidate: e.candidate });
+        };
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        socket.emit('call-invite', { to: target, callType: 'audio', offer });
+        // show call bar
+        document.getElementById('callBarTitle').textContent = target === 'all' ? 'ჯგუფური ზარი' : '📞 ' + target;
+        document.getElementById('callBarStatus').textContent = 'ელოდება პასუხს...';
+        document.getElementById('callBar').classList.add('active');
+    } catch(e) {
+        alert('მიკროფონი ვერ მოიძებნა: ' + e.message);
+    }
+}
+
+async function acceptCall() {
+    document.getElementById('incomingCall').classList.remove('show');
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        peerConnection = new RTCPeerConnection(STUN);
+        localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
+        peerConnection.ontrack = e => {
+            const audio = document.getElementById('remoteAudio');
+            if (audio) audio.srcObject = e.streams[0];
+        };
+        peerConnection.onicecandidate = e => {
+            if (e.candidate) socket.emit('call-ice', { to: pendingFrom, candidate: e.candidate });
+        };
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer));
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        socket.emit('call-answer', { to: pendingFrom, answer });
+        document.getElementById('callBarTitle').textContent = '📞 ' + pendingFrom;
+        document.getElementById('callBarStatus').textContent = 'დაკავშირებულია ✓';
+        document.getElementById('callBar').classList.add('active');
+    } catch(e) {
+        alert('შეცდომა: ' + e.message);
+    }
+}
+
+function declineCall() {
+    document.getElementById('incomingCall').classList.remove('show');
+    socket.emit('call-end', { to: pendingFrom });
+    pendingOffer = null; pendingFrom = null;
+}
+
+function endCall(notify = true) {
+    if (notify && socket) socket.emit('call-end', { to: callTarget });
+    if (peerConnection) { peerConnection.close(); peerConnection = null; }
+    if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+    document.getElementById('callBar').classList.remove('active');
+    document.getElementById('incomingCall').classList.remove('show');
+    isMuted = false;
+    const muteBtn = document.getElementById('muteBtn');
+    if (muteBtn) { muteBtn.classList.remove('muted'); muteBtn.innerHTML = '<i class="fa-solid fa-microphone"></i>'; }
+}
+
+function toggleMute() {
+    if (!localStream) return;
+    isMuted = !isMuted;
+    localStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
+    const btn = document.getElementById('muteBtn');
+    if (btn) {
+        btn.classList.toggle('muted', isMuted);
+        btn.innerHTML = isMuted ? '<i class="fa-solid fa-microphone-slash"></i>' : '<i class="fa-solid fa-microphone"></i>';
+    }
+}
+
+
 window.onload = async function() {
     // dark mode — apply before paint to avoid flicker
     applyTheme(localStorage.getItem('goniursa_theme') === 'dark');
