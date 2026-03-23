@@ -694,7 +694,30 @@ app.delete('/api/students/:name', async (req, res) => {
   } finally { client.release(); }
 });
 
-// ─── GRADES ────────────────────────────────────────────────────────────────
+app.delete('/api/assignments/by-author/:author', async (req, res) => {
+  const author = decodeURIComponent(req.params.author);
+  const client = await _pool.connect();
+  try {
+    await client.query(
+      `DELETE FROM "assignmentSubmissions" WHERE data->>'author' LIKE $1 OR data->>'author' = $2`,
+      ['%' + author, author]
+    );
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+  finally { client.release(); }
+});
+
+app.delete('/api/grades/by-user/:user', async (req, res) => {
+  const user = decodeURIComponent(req.params.user);
+  const client = await _pool.connect();
+  try {
+    await client.query(`DELETE FROM "grades" WHERE data->>'user' = $1`, [user]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+  finally { client.release(); }
+});
+
+
 app.get('/api/grades', async (req, res) => res.json(await readCollection('grades')));
 app.post('/api/grades', async (req, res) => {
   const { user, score, note } = req.body || {};
