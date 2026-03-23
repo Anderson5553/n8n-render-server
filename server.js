@@ -50,31 +50,48 @@ const upload = multer({ storage: multer.memoryStorage() });
   await ensureCollection('studentActivity');
   await ensureCollection('studentProgress');
   await ensureCollection('essays');
-  // cleanup duplicate users on every start
-  try {
-    const users = await readCollection('users');
-    const seen = new Set();
-    const unique = users.slice().reverse().filter(u => {
-      if (!u.username || seen.has(u.username)) return false;
-      seen.add(u.username);
-      return true;
-    }).reverse();
-    if (unique.length < users.length) {
-      await writeCollection('users', unique);
-      console.log(`✅ Cleaned up ${users.length - unique.length} duplicate users`);
-    }
-  } catch(e) {}
-  // cleanup duplicate students on every start
-  try {
-    const students = await readCollection('students');
-    const seen2 = new Set();
-    const unique2 = students.filter(s => { if (!s.name || seen2.has(s.name)) return false; seen2.add(s.name); return true; });
-    if (unique2.length < students.length) {
-      await writeCollection('students', unique2);
-      console.log(`✅ Cleaned up ${students.length - unique2.length} duplicate students`);
-    }
-  } catch(e) {}
 })();
+
+// Run cleanup after server is ready — direct SQL, no pool contention
+async function runStartupCleanup() {
+  try {
+    const { Pool } = require('pg');
+    const cleanPool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+      max: 2,
+      connectionTimeoutMillis: 8000,
+    });
+    const client = await cleanPool.connect();
+    try {
+      // cleanup duplicate users — keep latest per username
+      const u = await client.query(`
+        DELETE FROM "users" WHERE id NOT IN (
+          SELECT DISTINCT ON ((data->>'username')) id
+          FROM "users" ORDER BY (data->>'username'), id DESC
+        )
+      `);
+      if (u.rowCount > 0) console.log(`✅ Cleaned up ${u.rowCount} duplicate users`);
+
+      // cleanup duplicate students — keep latest per name
+      const s = await client.query(`
+        DELETE FROM "students" WHERE id NOT IN (
+          SELECT DISTINCT ON ((data->>'name')) id
+          FROM "students" ORDER BY (data->>'name'), id DESC
+        )
+      `);
+      if (s.rowCount > 0) console.log(`✅ Cleaned up ${s.rowCount} duplicate students`);
+    } finally {
+      client.release();
+      await cleanPool.end();
+    }
+  } catch(e) {
+    console.log('Cleanup skipped:', e.message);
+  }
+}
+
+// delay cleanup by 5s so main pool settles first
+setTimeout(runStartupCleanup, 5000);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
@@ -150,14 +167,14 @@ app.get('/api/users/all', async (req, res) => {
   res.json(unique.map(u => ({ id: u.id, username: u.username, status: u.status || 'approved' })));
 });
 
-// ─── USER APPROVAL (optimized — direct SQL, no full table rewrite) ────────────
+// ─── USER APPROVAL (optimized — direct SQL) ──────────────────────────────────
 const pg = require('pg');
 const _pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
-  max: 5,
+  max: 3,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
+  connectionTimeoutMillis: 8000,
 });
 
 async function updateUserStatus(id, status) {
@@ -887,6 +904,89 @@ app.delete('/api/text-materials/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
-app.listen(PORT, () => {
+
+// ─── SOCKET.IO + HTTP SERVER ─────────────────────────────────────────────────
+const http = require('http');
+const { Server } = require('socket.io');
+
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: '*', methods: ['GET','POST'] }
+});
+
+// online users map: socketId -> { username, room }
+const onlineUsers = new Map();
+
+io.on('connection', (socket) => {
+  // user joins with their username
+  socket.on('join', ({ username }) => {
+    socket.username = username;
+    onlineUsers.set(socket.id, { username, socketId: socket.id });
+    io.emit('users-online', [...onlineUsers.values()]);
+  });
+
+  // ── CHAT ──
+  socket.on('chat-message', ({ to, text, group }) => {
+    const from = socket.username;
+    const msg = { from, text, time: new Date().toISOString(), id: Date.now() };
+    if (to === 'all') {
+      // broadcast to everyone
+      io.emit('chat-message', { ...msg, channel: 'all' });
+    } else if (group) {
+      // broadcast to specific group tag
+      io.emit('chat-message', { ...msg, channel: 'group:' + group });
+    } else {
+      // private message
+      const target = [...onlineUsers.values()].find(u => u.username === to);
+      if (target) {
+        io.to(target.socketId).emit('chat-message', { ...msg, channel: 'private:' + from });
+        socket.emit('chat-message', { ...msg, channel: 'private:' + to, mine: true });
+      }
+    }
+  });
+
+  // ── CALL SIGNALING (WebRTC) ──
+  socket.on('call-invite', ({ to, group, callType, offer }) => {
+    const from = socket.username;
+    if (to === 'all') {
+      socket.broadcast.emit('call-invite', { from, callType, offer, channel: 'all' });
+    } else if (group) {
+      socket.broadcast.emit('call-invite', { from, callType, offer, channel: 'group:' + group });
+    } else {
+      const target = [...onlineUsers.values()].find(u => u.username === to);
+      if (target) io.to(target.socketId).emit('call-invite', { from, callType, offer, channel: 'private' });
+    }
+  });
+
+  socket.on('call-answer', ({ to, answer }) => {
+    const target = [...onlineUsers.values()].find(u => u.username === to);
+    if (target) io.to(target.socketId).emit('call-answer', { from: socket.username, answer });
+  });
+
+  socket.on('call-ice', ({ to, candidate }) => {
+    if (to === 'all') {
+      socket.broadcast.emit('call-ice', { from: socket.username, candidate });
+    } else {
+      const target = [...onlineUsers.values()].find(u => u.username === to);
+      if (target) io.to(target.socketId).emit('call-ice', { from: socket.username, candidate });
+    }
+  });
+
+  socket.on('call-end', ({ to }) => {
+    if (to === 'all') {
+      socket.broadcast.emit('call-end', { from: socket.username });
+    } else {
+      const target = [...onlineUsers.values()].find(u => u.username === to);
+      if (target) io.to(target.socketId).emit('call-end', { from: socket.username });
+    }
+  });
+
+  socket.on('disconnect', () => {
+    onlineUsers.delete(socket.id);
+    io.emit('users-online', [...onlineUsers.values()]);
+  });
+});
+
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
