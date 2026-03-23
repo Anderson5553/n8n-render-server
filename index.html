@@ -1017,10 +1017,15 @@
 
         <!-- ALL USERS -->
         <div class="form-box" style="margin-bottom:20px;">
-            <h3 style="color:var(--primary);margin-bottom:10px;">
-                <i class="fa-solid fa-users" style="margin-right:8px;color:var(--primary-light);"></i>
-                ყველა მომხმარებელი
-            </h3>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+                <h3 style="color:var(--primary);">
+                    <i class="fa-solid fa-users" style="margin-right:8px;color:var(--primary-light);"></i>
+                    ყველა მომხმარებელი
+                </h3>
+                <button onclick="runCleanup()" style="background:rgba(239,68,68,0.1);color:#b91c1c;border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:6px 14px;cursor:pointer;font-size:0.82rem;font-weight:600;">
+                    <i class="fa-solid fa-broom"></i> დუბლიკატების გასუფთავება
+                </button>
+            </div>
             <div id="allUsersList"><p style="color:var(--text-muted);">იტვირთება...</p></div>
         </div>
         <div class="form-box">
@@ -2472,7 +2477,23 @@ async function loadPendingUsers() {
     } catch (e) { if (el) el.innerHTML = '<p style="color:#b91c1c;">ჩატვირთვა ვერ მოხერხდა.</p>'; }
 }
 
-async function loadAllUsers() {
+async function runCleanup() {
+    const btn = event.target.closest('button');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> გასუფთავება...'; }
+    try {
+        const [u, s] = await Promise.all([
+            fetch('/api/users/cleanup', { method:'POST' }).then(r => r.json()),
+            fetch('/api/students/cleanup', { method:'POST' }).then(r => r.json())
+        ]);
+        showToast(`გასუფთავდა: ${u.removed + s.removed} დუბლიკატი ✓`);
+        loadAllUsers();
+        loadPendingUsers();
+        loadStudentActivity();
+    } catch(e) { alert('შეცდომა!'); }
+    finally { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-broom"></i> დუბლიკატების გასუფთავება'; } }
+}
+
+
     const el = document.getElementById('allUsersList');
     if (!el) return;
     try {
