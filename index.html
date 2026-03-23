@@ -844,6 +844,7 @@
         </div>
         <div class="admin-toolbar" id="proverbsToolbar">
             <button class="btn-add" onclick="openProverbModal()"><i class="fa-solid fa-plus"></i> ანდაზის დამატება</button>
+            <button class="btn-add" style="background:linear-gradient(to right,#6366f1,#4f46e5);" onclick="selectAllCb('proverb')"><i class="fa-solid fa-check-double"></i> ყველა</button>
             <button class="btn-add" style="background:linear-gradient(to right,#ef4444,#dc2626);" onclick="bulkDeleteProverbs()"><i class="fa-solid fa-trash"></i> არჩეულის წაშლა</button>
         </div>
         <div class="proverbs-grid" id="proverbsGrid">
@@ -859,6 +860,7 @@
         </div>
         <div class="admin-toolbar" id="phrasesToolbar">
             <button class="btn-add" onclick="addPhrase()"><i class="fa-solid fa-plus"></i> ბარათის დამატება</button>
+            <button class="btn-add" style="background:linear-gradient(to right,#6366f1,#4f46e5);" onclick="selectAllCb('phrase')"><i class="fa-solid fa-check-double"></i> ყველა</button>
             <button class="btn-add" style="background:linear-gradient(to right,#ef4444,#dc2626);" onclick="bulkDeletePhrases()"><i class="fa-solid fa-trash"></i> არჩეულის წაშლა</button>
         </div>
         <div class="flashcard-container" id="phraseGrid"></div>
@@ -869,6 +871,7 @@
         <div class="section-header"><h2>ინტერაქტიული ლექსიკონი</h2></div>
         <div class="admin-toolbar" id="dictToolbar">
             <button class="btn-add" onclick="addDictWord()"><i class="fa-solid fa-plus"></i> სიტყვის დამატება</button>
+            <button class="btn-add" style="background:linear-gradient(to right,#6366f1,#4f46e5);" onclick="selectAllCb('dict')"><i class="fa-solid fa-check-double"></i> ყველა</button>
             <button class="btn-add" style="background:linear-gradient(to right,#ef4444,#dc2626);" onclick="bulkDeleteDict()"><i class="fa-solid fa-trash"></i> არჩეულის წაშლა</button>
         </div>
         <input type="text" id="dictSearch" class="dict-search" placeholder="🔍 მოძებნეთ სიტყვა..." onkeyup="filterDict()">
@@ -922,6 +925,7 @@
         </div>
         <div class="admin-toolbar" id="essaysToolbar">
             <button class="btn-add" onclick="toggleEssayUpload()"><i class="fa-solid fa-file-arrow-up"></i> ნაშრომის ატვირთვა</button>
+            <button class="btn-add" style="background:linear-gradient(to right,#6366f1,#4f46e5);" onclick="selectAllCb('essay')"><i class="fa-solid fa-check-double"></i> ყველა</button>
             <button class="btn-add" style="background:linear-gradient(to right,#ef4444,#dc2626);" onclick="bulkDeleteEssays()"><i class="fa-solid fa-trash"></i> არჩეულის წაშლა</button>
             <div id="essayUploadForm" style="display:none;margin-top:14px;padding-top:14px;border-top:1px dashed rgba(59,130,246,0.5);text-align:left;">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -1006,6 +1010,7 @@
         </div>
         <div class="admin-toolbar" id="quizzesToolbar">
             <button class="btn-add" onclick="openQuizEditor()"><i class="fa-solid fa-plus"></i> ახალი ქვიზი</button>
+            <button class="btn-add" style="background:linear-gradient(to right,#6366f1,#4f46e5);" onclick="selectAllCb('quiz')"><i class="fa-solid fa-check-double"></i> ყველა</button>
             <button class="btn-add" style="background:linear-gradient(to right,#ef4444,#dc2626);" onclick="bulkDeleteQuizzes()"><i class="fa-solid fa-trash"></i> არჩეულის წაშლა</button>
         </div>
         <div id="quizList" class="grid"></div>
@@ -2846,6 +2851,15 @@ async function renderProfileStats() {
 /* ═══════════════════════════════════════════════════
    BULK SELECT UTILITIES
 ═══════════════════════════════════════════════════ */
+function selectAllCb(prefix) {
+    const cbs = document.querySelectorAll('input[data-cb="' + prefix + '"]');
+    const allChecked = [...cbs].every(cb => cb.checked);
+    cbs.forEach(cb => cb.checked = !allChecked);
+    const master = document.getElementById('master-cb-' + prefix);
+    if (master) master.checked = !allChecked;
+    updateBulkToolbar('bulk-' + prefix, 'bulk-count-' + prefix, allChecked ? 0 : cbs.length);
+}
+
 function updateBulkToolbar(toolbarId, countId, selectedCount) {
     const tb = document.getElementById(toolbarId);
     const ct = document.getElementById(countId);
