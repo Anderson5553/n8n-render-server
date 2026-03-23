@@ -76,10 +76,10 @@ app.post('/api/register', async (req, res) => {
   const users = await readCollection('users');
   if (users.find(u => u.username === username)) return res.status(409).json({ error: 'username taken' });
   const hashed = await hashPassword(password);
-  const newUser = { id: nextId(users), username, password: hashed };
+  const newUser = { id: nextId(users), username, password: hashed, status: 'pending' };
   users.push(newUser);
   await writeCollection('users', users);
-  res.status(201).json({ id: newUser.id, username: newUser.username });
+  res.status(201).json({ id: newUser.id, username: newUser.username, status: 'pending' });
 });
 
 app.post('/api/login', async (req, res) => {
@@ -90,12 +90,63 @@ app.post('/api/login', async (req, res) => {
   if (!user) return res.status(401).json({ error: 'invalid credentials' });
   const ok = await verifyPassword(password, user.password);
   if (!ok) return res.status(401).json({ error: 'invalid credentials' });
+  if (user.status === 'pending') return res.status(403).json({ error: 'pending' });
+  if (user.status === 'rejected') return res.status(403).json({ error: 'rejected' });
+  // users with no status = old accounts, treat as approved
   // migrate plain-text → hashed on successful login
   if (bcrypt && !user.password.startsWith('$2')) {
     user.password = await hashPassword(password);
     await writeCollection('users', users);
   }
   res.json({ role: 'student', username: user.username });
+});
+
+// ─── USER APPROVAL ──────────────────────────────────────────────────────────
+app.get('/api/users/pending', async (req, res) => {
+  const users = await readCollection('users');
+  res.json(users.filter(u => u.status === 'pending').map(u => ({ id: u.id, username: u.username, status: u.status })));
+});
+
+app.get('/api/users/all', async (req, res) => {
+  const users = await readCollection('users');
+  res.json(users.map(u => ({ id: u.id, username: u.username, status: u.status || 'approved' })));
+});
+
+app.patch('/api/users/:id/approve', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const users = await readCollection('users');
+  const user = users.find(u => u.id === id);
+  if (!user) return res.status(404).json({ error: 'not found' });
+  user.status = 'approved';
+  await writeCollection('users', users);
+  // notify student
+  await (async () => {
+    const notifs = await readCollection('notifications');
+    const { nextId: nid } = require('./lib/storage');
+    notifs.push({ id: nextId(notifs), user: user.username, kind: 'approval', message: 'თქვენი ანგარიში დამტკიცებულია! შეგიძლიათ შეხვიდეთ სისტემაში.', read: false, createdAt: new Date().toISOString() });
+    await writeCollection('notifications', notifs);
+  })().catch(() => {});
+  res.json({ ok: true });
+});
+
+app.patch('/api/users/:id/reject', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const users = await readCollection('users');
+  const user = users.find(u => u.id === id);
+  if (!user) return res.status(404).json({ error: 'not found' });
+  user.status = 'rejected';
+  await writeCollection('users', users);
+  res.json({ ok: true });
+});
+
+app.delete('/api/users/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const users = await readCollection('users');
+  const idx = users.findIndex(u => u.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'not found' });
+  users.splice(idx, 1);
+  await writeCollection('users', users);
+  res.json({ ok: true });
 });
 
 // ─── STUDENT PROGRESS SYNC ──────────────────────────────────────────────────
