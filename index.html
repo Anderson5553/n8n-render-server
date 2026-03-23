@@ -1002,6 +1002,26 @@
     <!-- TEACHER PANEL -->
     <section id="teacherPanel">
         <div class="section-header"><h2>მასწავლებლის პულტი</h2></div>
+
+        <!-- PENDING APPROVALS -->
+        <div class="form-box" style="border-left:4px solid #f59e0b;margin-bottom:20px;">
+            <h3 style="color:var(--primary);margin-bottom:6px;">
+                <i class="fa-solid fa-user-clock" style="color:#f59e0b;margin-right:8px;"></i>
+                დასამტკიცებელი მოსწავლეები
+                <span id="pendingCount" style="background:#ef4444;color:#fff;border-radius:999px;padding:2px 8px;font-size:0.75rem;margin-left:8px;display:none;">0</span>
+            </h3>
+            <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:14px;">რეგისტრირებული მომხმარებლები რომლებიც ელოდებიან დამტკიცებას</p>
+            <div id="pendingUsersList"><p style="color:var(--text-muted);">იტვირთება...</p></div>
+        </div>
+
+        <!-- ALL USERS -->
+        <div class="form-box" style="margin-bottom:20px;">
+            <h3 style="color:var(--primary);margin-bottom:10px;">
+                <i class="fa-solid fa-users" style="margin-right:8px;color:var(--primary-light);"></i>
+                ყველა მომხმარებელი
+            </h3>
+            <div id="allUsersList"><p style="color:var(--text-muted);">იტვირთება...</p></div>
+        </div>
         <div class="form-box">
             <h3 style="color:var(--primary);margin-bottom:10px;">ატვირთული დავალებები</h3>
             <input type="text" id="teacherSearch" placeholder="ფილტრი: მოსწავლის სახელი ან სათაური..." onkeyup="filterTeacherAssignments()">
@@ -1271,7 +1291,7 @@ function switchTab(tabId) {
         media: loadMedia,
         about: loadAbout,
         studentActivity: () => { loadStudentActivity(); },
-        teacherPanel: () => { loadTeacherAssignments(); refreshTeacherJournal(); loadManualJournal(); },
+        teacherPanel: () => { loadPendingUsers(); loadAllUsers(); loadTeacherAssignments(); refreshTeacherJournal(); loadManualJournal(); },
         editTasks: () => { loadEditTasks(); if (isAdmin) loadEditSubmissions(); },
         assignments: loadAssignmentSubmissions,
         essays: loadEssays
@@ -1325,6 +1345,13 @@ async function login() {
     const password = document.getElementById('loginPass').value;
     try {
         const resp = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, password }) });
+        if (resp.status === 403) {
+            const data = await resp.json();
+            closeAuth();
+            if (data.error === 'pending') showPendingMessage();
+            else alert('თქვენი ანგარიში უარყოფილია. დაუკავშირდით მასწავლებელს.');
+            return;
+        }
         if (!resp.ok) return alert('არასწორი მონაცემები!');
         const data = await resp.json();
         isAdmin = data.role === 'teacher';
@@ -1332,19 +1359,40 @@ async function login() {
         currentUser = isAdmin ? '👨‍🏫 მასწავლებელი' : '👤 ' + data.username;
         sessionStorage.setItem('goniursa_session', JSON.stringify({ username: data.username, role: data.role }));
         document.getElementById('authBtn').textContent = currentUser + ' (გამოსვლა)';
+        const mb = document.getElementById('authBtnMobile'); if (mb) mb.textContent = currentUser + ' (გამოსვლა)';
         updateUIForRole();
         closeAuth();
         showToast('მოგესალმებით, ' + currentUser + ' ✓');
         loadNotifications();
         maybeShowWelcomeModal();
-        if (!isAdmin) startActivityPing();
-        // register student automatically in students collection
         if (!isAdmin) {
             startActivityPing();
             syncProgressFromDB();
             fetch('/api/students', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: data.username }) }).catch(() => {});
         }
     } catch (e) { alert('შეცდომა!'); }
+}
+
+function showPendingMessage() {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.88);z-index:5000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(10px);';
+    overlay.innerHTML = `
+        <div style="background:var(--white);border-radius:18px;padding:36px 28px;max-width:380px;width:90%;text-align:center;box-shadow:0 32px 80px rgba(0,0,0,0.4);">
+            <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#f97316);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+                <i class="fa-solid fa-clock" style="font-size:2rem;color:#fff;"></i>
+            </div>
+            <h2 style="color:var(--primary);font-family:Georgia,serif;margin-bottom:12px;">მოლოდინის რეჟიმი</h2>
+            <p style="color:var(--text-muted);line-height:1.7;margin-bottom:24px;">
+                თქვენი რეგისტრაცია მიღებულია.<br>
+                <strong style="color:var(--text-main);">მასწავლებელი დაამტკიცებს თქვენს ანგარიშს</strong><br>
+                და მაშინ შეძლებთ შესვლას.
+            </p>
+            <button onclick="this.closest('[style]').remove()" style="background:linear-gradient(to right,var(--primary),var(--primary-light));color:#fff;border:none;border-radius:10px;padding:12px 28px;cursor:pointer;font-weight:700;font-size:0.95rem;width:100%;">
+                გასაგებია
+            </button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
 }
 
 function restoreSession() {
@@ -2277,7 +2325,15 @@ async function loadNotifications() {
         const resp = await fetch('/api/notifications?user=' + encodeURIComponent(userKey));
         const items = resp.ok ? await resp.json() : [];
         const unread = items.filter(x => !x.read).length;
-        if (dot) dot.style.display = unread ? 'block' : 'none';
+        if (isAdmin) {
+            // also check pending users for teacher badge
+            fetch('/api/users/pending').then(r => r.ok ? r.json() : []).then(pending => {
+                const dot = document.getElementById('notifDot');
+                if (dot && pending.length) dot.style.display = 'block';
+                const badge = document.getElementById('pendingCount');
+                if (badge) { badge.style.display = pending.length ? 'inline' : 'none'; badge.textContent = pending.length; }
+            }).catch(() => {});
+        }
         if (!listEl) return;
         if (!items.length) { listEl.innerHTML = '<p style="color:var(--text-muted);">შეტყობინებები ჯერ არ არის.</p>'; return; }
         listEl.innerHTML = items.slice().reverse().map(n => `
@@ -2369,8 +2425,109 @@ async function reviewEditSubmission(id) {
 }
 
 /* ═══════════════════════════════════════════════════
-   TEACHER PANEL
+   USER APPROVAL
 ═══════════════════════════════════════════════════ */
+async function loadPendingUsers() {
+    const el = document.getElementById('pendingUsersList');
+    const badge = document.getElementById('pendingCount');
+    if (!el) return;
+    try {
+        const resp = await fetch('/api/users/pending');
+        const users = resp.ok ? await resp.json() : [];
+        if (badge) { badge.style.display = users.length ? 'inline' : 'none'; badge.textContent = users.length; }
+        if (!users.length) {
+            el.innerHTML = '<p style="color:var(--text-muted);font-size:0.9rem;">დასამტკიცებელი მოსწავლეები არ არის ✓</p>';
+            return;
+        }
+        el.innerHTML = users.map(u => `
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
+                <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#f97316);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.1rem;flex-shrink:0;">
+                    ${escapeHtml(u.username.charAt(0).toUpperCase())}
+                </div>
+                <div style="flex:1;">
+                    <div style="font-weight:700;color:var(--text-main);">${escapeHtml(u.username)}</div>
+                    <div style="font-size:0.78rem;color:#f59e0b;font-weight:600;">⏳ მოლოდინში</div>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button onclick="approveUser(${u.id})" style="background:linear-gradient(to right,#22c55e,#16a34a);color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-weight:700;font-size:0.85rem;">
+                        <i class="fa-solid fa-check"></i> დამტკიცება
+                    </button>
+                    <button onclick="rejectUser(${u.id})" style="background:rgba(239,68,68,0.9);color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-weight:700;font-size:0.85rem;">
+                        <i class="fa-solid fa-xmark"></i> უარყოფა
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) { if (el) el.innerHTML = '<p style="color:#b91c1c;">ჩატვირთვა ვერ მოხერხდა.</p>'; }
+}
+
+async function loadAllUsers() {
+    const el = document.getElementById('allUsersList');
+    if (!el) return;
+    try {
+        const resp = await fetch('/api/users/all');
+        const users = resp.ok ? await resp.json() : [];
+        if (!users.length) { el.innerHTML = '<p style="color:var(--text-muted);">მომხმარებლები არ არის.</p>'; return; }
+        const statusColor = { approved:'#22c55e', pending:'#f59e0b', rejected:'#ef4444' };
+        const statusLabel = { approved:'დამტკიცებული', pending:'მოლოდინში', rejected:'უარყოფილი' };
+        el.innerHTML = `<div style="overflow:auto;"><table style="width:100%;border-collapse:collapse;">
+            <thead><tr>
+                <th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">მომხმარებელი</th>
+                <th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">სტატუსი</th>
+                <th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">ქმედება</th>
+            </tr></thead>
+            <tbody>${users.map(u => `
+                <tr>
+                    <td style="padding:10px 8px;border-bottom:1px solid var(--border);">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--primary-light),var(--primary));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:0.9rem;">
+                                ${escapeHtml(u.username.charAt(0).toUpperCase())}
+                            </div>
+                            <span style="font-weight:600;">${escapeHtml(u.username)}</span>
+                        </div>
+                    </td>
+                    <td style="padding:10px 8px;border-bottom:1px solid var(--border);">
+                        <span style="background:${statusColor[u.status]||'#94a3b8'}22;color:${statusColor[u.status]||'#94a3b8'};border-radius:999px;padding:3px 10px;font-size:0.78rem;font-weight:700;">
+                            ${statusLabel[u.status]||u.status}
+                        </span>
+                    </td>
+                    <td style="padding:10px 8px;border-bottom:1px solid var(--border);">
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                            ${u.status !== 'approved' ? `<button onclick="approveUser(${u.id})" style="background:#22c55e;color:#fff;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:0.78rem;font-weight:600;"><i class="fa-solid fa-check"></i></button>` : ''}
+                            ${u.status !== 'rejected' ? `<button onclick="rejectUser(${u.id})" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:0.78rem;font-weight:600;"><i class="fa-solid fa-xmark"></i></button>` : ''}
+                            <button onclick="deleteUserAccount(${u.id})" style="background:rgba(100,116,139,0.2);color:var(--text-muted);border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:0.78rem;"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('')}</tbody>
+        </table></div>`;
+    } catch (e) { if (el) el.innerHTML = '<p style="color:#b91c1c;">ჩატვირთვა ვერ მოხერხდა.</p>'; }
+}
+
+async function approveUser(id) {
+    await fetch('/api/users/' + id + '/approve', { method: 'PATCH' });
+    showToast('მოსწავლე დამტკიცებულია ✓');
+    loadPendingUsers();
+    loadAllUsers();
+}
+
+async function rejectUser(id) {
+    if (!confirm('უარყოფა?')) return;
+    await fetch('/api/users/' + id + '/reject', { method: 'PATCH' });
+    showToast('უარყოფილია ✓');
+    loadPendingUsers();
+    loadAllUsers();
+}
+
+async function deleteUserAccount(id) {
+    if (!confirm('სრულად წავშალო ანგარიში?')) return;
+    await fetch('/api/users/' + id, { method: 'DELETE' });
+    showToast('ანგარიში წაიშალა ✓');
+    loadAllUsers();
+    loadPendingUsers();
+}
+
+
 async function loadTeacherAssignments() {
     const container = document.getElementById('teacherAssignments');
     if (!container) return;
