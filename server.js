@@ -50,6 +50,16 @@ const upload = multer({ storage: multer.memoryStorage() });
   await ensureCollection('studentActivity');
   await ensureCollection('studentProgress');
   await ensureCollection('essays');
+  // cleanup duplicate students on every start
+  try {
+    const students = await readCollection('students');
+    const seen = new Set();
+    const unique = students.filter(s => { if (!s.name || seen.has(s.name)) return false; seen.add(s.name); return true; });
+    if (unique.length < students.length) {
+      await writeCollection('students', unique);
+      console.log(`✅ Cleaned up ${students.length - unique.length} duplicate students`);
+    }
+  } catch(e) {}
 })();
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
@@ -211,9 +221,16 @@ app.get('/api/activity', async (req, res) => {
   const assignments = await readCollection('assignmentSubmissions');
   const quizAttempts = await readCollection('quizAttempts');
 
-  // Mark stale pings (>3 min) as offline
+  // deduplicate students by name
+  const seen = new Set();
+  const uniqueStudents = students.filter(s => {
+    if (!s.name || seen.has(s.name)) return false;
+    seen.add(s.name);
+    return true;
+  });
+
   const now = Date.now();
-  const enriched = students.map(s => {
+  const enriched = uniqueStudents.map(s => {
     const act = activity.find(a => a.username === s.name) || {};
     const lastSeen = act.lastSeen ? new Date(act.lastSeen) : null;
     const diffMin = lastSeen ? (now - lastSeen.getTime()) / 60000 : Infinity;
@@ -236,6 +253,19 @@ app.get('/api/activity', async (req, res) => {
     };
   });
   res.json(enriched);
+});
+
+// cleanup duplicate students
+app.post('/api/students/cleanup', async (req, res) => {
+  const students = await readCollection('students');
+  const seen = new Set();
+  const unique = students.filter(s => {
+    if (!s.name || seen.has(s.name)) return false;
+    seen.add(s.name);
+    return true;
+  });
+  await writeCollection('students', unique);
+  res.json({ removed: students.length - unique.length });
 });
 
 // ─── ABOUT PAGE ────────────────────────────────────────────────────────────
