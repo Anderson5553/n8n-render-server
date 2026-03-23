@@ -684,6 +684,7 @@
         <div class="nav-group teacher-only" style="display:none;">
             <button class="nav-group-btn" style="color:#fbbf24;" onclick="toggleDropdown(this)"><i class="fa-solid fa-gauge-high"></i> პულტი <i class="fa-solid fa-chevron-down chevron"></i></button>
             <div class="nav-dropdown">
+                <button onclick="closeDropdowns();switchTab('teacherPanel')"><i class="fa-solid fa-user-clock" style="color:#f59e0b;"></i> დამტკიცება <span id="pendingNavBadge" style="display:none;background:#ef4444;color:#fff;border-radius:999px;padding:0px 6px;font-size:0.72rem;margin-left:2px;">0</span></button>
                 <button onclick="closeDropdowns();switchTab('teacherPanel')"><i class="fa-solid fa-table-list"></i> ჟურნალი</button>
                 <button onclick="closeDropdowns();switchTab('studentActivity')"><i class="fa-solid fa-users"></i> მოსწავლეები</button>
                 <div class="sep"></div>
@@ -2326,12 +2327,16 @@ async function loadNotifications() {
         const items = resp.ok ? await resp.json() : [];
         const unread = items.filter(x => !x.read).length;
         if (isAdmin) {
-            // also check pending users for teacher badge
             fetch('/api/users/pending').then(r => r.ok ? r.json() : []).then(pending => {
                 const dot = document.getElementById('notifDot');
                 if (dot && pending.length) dot.style.display = 'block';
                 const badge = document.getElementById('pendingCount');
-                if (badge) { badge.style.display = pending.length ? 'inline' : 'none'; badge.textContent = pending.length; }
+                const navBadge = document.getElementById('pendingNavBadge');
+                [badge, navBadge].forEach(b => {
+                    if (!b) return;
+                    b.style.display = pending.length ? 'inline' : 'none';
+                    b.textContent = pending.length;
+                });
             }).catch(() => {});
         }
         if (!listEl) return;
@@ -2430,11 +2435,17 @@ async function reviewEditSubmission(id) {
 async function loadPendingUsers() {
     const el = document.getElementById('pendingUsersList');
     const badge = document.getElementById('pendingCount');
+    const navBadge = document.getElementById('pendingNavBadge');
     if (!el) return;
     try {
         const resp = await fetch('/api/users/pending');
         const users = resp.ok ? await resp.json() : [];
-        if (badge) { badge.style.display = users.length ? 'inline' : 'none'; badge.textContent = users.length; }
+        // update all badges
+        [badge, navBadge].forEach(b => {
+            if (!b) return;
+            b.style.display = users.length ? 'inline' : 'none';
+            b.textContent = users.length;
+        });
         if (!users.length) {
             el.innerHTML = '<p style="color:var(--text-muted);font-size:0.9rem;">დასამტკიცებელი მოსწავლეები არ არის ✓</p>';
             return;
