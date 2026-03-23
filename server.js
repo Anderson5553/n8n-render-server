@@ -150,40 +150,64 @@ app.get('/api/users/all', async (req, res) => {
   res.json(unique.map(u => ({ id: u.id, username: u.username, status: u.status || 'approved' })));
 });
 
+// ─── USER APPROVAL (optimized — direct SQL, no full table rewrite) ────────────
+const pg = require('pg');
+const _pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+  max: 5,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+});
+
+async function updateUserStatus(id, status) {
+  const client = await _pool.connect();
+  try {
+    // find and update just the one record directly in JSONB
+    const res = await client.query(`SELECT id, data FROM "users" WHERE (data->>'id')::int = $1 LIMIT 1`, [id]);
+    if (!res.rows.length) return false;
+    const rowId = res.rows[0].id;
+    const updated = { ...res.rows[0].data, status };
+    await client.query(`UPDATE "users" SET data = $1 WHERE id = $2`, [updated, rowId]);
+    return true;
+  } finally { client.release(); }
+}
+
+async function deleteUserById(id) {
+  const client = await _pool.connect();
+  try {
+    await client.query(`DELETE FROM "users" WHERE (data->>'id')::int = $1`, [id]);
+    return true;
+  } finally { client.release(); }
+}
+
 app.patch('/api/users/:id/approve', async (req, res) => {
   const id = parseInt(req.params.id);
-  const users = await readCollection('users');
-  const user = users.find(u => u.id === id);
-  if (!user) return res.status(404).json({ error: 'not found' });
-  user.status = 'approved';
-  await writeCollection('users', users);
-  // notify student
-  await (async () => {
-    const notifs = await readCollection('notifications');
-    const { nextId: nid } = require('./lib/storage');
-    notifs.push({ id: nextId(notifs), user: user.username, kind: 'approval', message: 'თქვენი ანგარიში დამტკიცებულია! შეგიძლიათ შეხვიდეთ სისტემაში.', read: false, createdAt: new Date().toISOString() });
-    await writeCollection('notifications', notifs);
-  })().catch(() => {});
+  const ok = await updateUserStatus(id, 'approved');
+  if (!ok) return res.status(404).json({ error: 'not found' });
+  // send notification
+  try {
+    const users = await readCollection('users');
+    const user = users.find(u => u.id === id);
+    if (user) {
+      const notifs = await readCollection('notifications');
+      notifs.push({ id: nextId(notifs), user: user.username, kind: 'approval', message: 'თქვენი ანგარიში დამტკიცებულია! შეგიძლიათ შეხვიდეთ სისტემაში.', read: false, createdAt: new Date().toISOString() });
+      await writeCollection('notifications', notifs);
+    }
+  } catch(e) {}
   res.json({ ok: true });
 });
 
 app.patch('/api/users/:id/reject', async (req, res) => {
   const id = parseInt(req.params.id);
-  const users = await readCollection('users');
-  const user = users.find(u => u.id === id);
-  if (!user) return res.status(404).json({ error: 'not found' });
-  user.status = 'rejected';
-  await writeCollection('users', users);
+  const ok = await updateUserStatus(id, 'rejected');
+  if (!ok) return res.status(404).json({ error: 'not found' });
   res.json({ ok: true });
 });
 
 app.delete('/api/users/:id', async (req, res) => {
   const id = parseInt(req.params.id);
-  const users = await readCollection('users');
-  const idx = users.findIndex(u => u.id === id);
-  if (idx === -1) return res.status(404).json({ error: 'not found' });
-  users.splice(idx, 1);
-  await writeCollection('users', users);
+  await deleteUserById(id);
   res.json({ ok: true });
 });
 
@@ -286,28 +310,37 @@ app.get('/api/activity', async (req, res) => {
 // cleanup duplicate students
 app.post('/api/users/cleanup', async (req, res) => {
   try {
-    const users = await readCollection('users');
-    const seen = new Set();
-    const unique = users.slice().reverse().filter(u => {
-      if (!u.username || seen.has(u.username)) return false;
-      seen.add(u.username);
-      return true;
-    }).reverse();
-    await writeCollection('users', unique);
-    res.json({ removed: users.length - unique.length, remaining: unique.length });
+    const client = await _pool.connect();
+    try {
+      // keep only the latest row per username, delete the rest
+      await client.query(`
+        DELETE FROM "users"
+        WHERE id NOT IN (
+          SELECT DISTINCT ON ((data->>'username')) id
+          FROM "users"
+          ORDER BY (data->>'username'), id DESC
+        )
+      `);
+      res.json({ ok: true, removed: 'duplicates cleared' });
+    } finally { client.release(); }
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/students/cleanup', async (req, res) => {
-  const students = await readCollection('students');
-  const seen = new Set();
-  const unique = students.filter(s => {
-    if (!s.name || seen.has(s.name)) return false;
-    seen.add(s.name);
-    return true;
-  });
-  await writeCollection('students', unique);
-  res.json({ removed: students.length - unique.length });
+  try {
+    const client = await _pool.connect();
+    try {
+      await client.query(`
+        DELETE FROM "students"
+        WHERE id NOT IN (
+          SELECT DISTINCT ON ((data->>'name')) id
+          FROM "students"
+          ORDER BY (data->>'name'), id DESC
+        )
+      `);
+      res.json({ ok: true });
+    } finally { client.release(); }
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 // ─── ABOUT PAGE ────────────────────────────────────────────────────────────
