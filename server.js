@@ -207,8 +207,31 @@ app.patch('/api/users/:id/reject', async (req, res) => {
 
 app.delete('/api/users/:id', async (req, res) => {
   const id = parseInt(req.params.id);
-  await deleteUserById(id);
-  res.json({ ok: true });
+  const client = await _pool.connect();
+  try {
+    const r = await client.query(
+      `DELETE FROM "users" WHERE (data->>'id')::text = $1::text`,
+      [id]
+    );
+    res.json({ ok: true, deleted: r.rowCount });
+  } catch(e) {
+    console.error('Delete user error:', e);
+    res.status(500).json({ error: e.message });
+  } finally { client.release(); }
+});
+
+app.delete('/api/users/by-username/:username', async (req, res) => {
+  const username = decodeURIComponent(req.params.username);
+  const client = await _pool.connect();
+  try {
+    const r = await client.query(
+      `DELETE FROM "users" WHERE data->>'username' = $1`,
+      [username]
+    );
+    res.json({ ok: true, deleted: r.rowCount });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  } finally { client.release(); }
 });
 
 // ─── STUDENT PROGRESS SYNC ──────────────────────────────────────────────────
