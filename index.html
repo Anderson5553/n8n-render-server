@@ -2526,7 +2526,7 @@ async function loadAllUsers() {
                         <div style="display:flex;gap:6px;flex-wrap:wrap;">
                             ${u.status !== 'approved' ? `<button onclick="approveUser(${u.id})" style="background:#22c55e;color:#fff;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:0.78rem;font-weight:600;"><i class="fa-solid fa-check"></i></button>` : ''}
                             ${u.status !== 'rejected' ? `<button onclick="rejectUser(${u.id})" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:0.78rem;font-weight:600;"><i class="fa-solid fa-xmark"></i></button>` : ''}
-                            <button onclick="deleteUserAccount(${u.id})" style="background:rgba(100,116,139,0.2);color:var(--text-muted);border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:0.78rem;"><i class="fa-solid fa-trash"></i></button>
+                            <button onclick="deleteUserAccount(${u.id},'${escapeHtml(u.username)}')" style="background:rgba(100,116,139,0.2);color:var(--text-muted);border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:0.78rem;"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </td>
                 </tr>
@@ -2550,12 +2550,19 @@ async function rejectUser(id) {
     loadAllUsers();
 }
 
-async function deleteUserAccount(id) {
-    if (!confirm('სრულად წავშალო ანგარიში?')) return;
-    await fetch('/api/users/' + id, { method: 'DELETE' });
+async function deleteUserAccount(id, username) {
+    if (!confirm('სრულად წავშალო ანგარიში ' + (username||'') + '?')) return;
+    // delete by username — most reliable
+    if (username) {
+        await fetch('/api/users/by-username/' + encodeURIComponent(username), { method: 'DELETE' });
+        await fetch('/api/students/' + encodeURIComponent(username), { method: 'DELETE' });
+    } else {
+        await fetch('/api/users/' + id, { method: 'DELETE' });
+    }
     showToast('ანგარიში წაიშალა ✓');
     loadAllUsers();
     loadPendingUsers();
+    refreshTeacherJournal();
 }
 
 
