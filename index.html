@@ -46,6 +46,43 @@
         * { margin:0; padding:0; box-sizing:border-box; font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Tahoma,sans-serif; transition: background-color 0.25s ease, color 0.25s ease; }
         body { background: var(--bg-gradient); color: var(--text-main); line-height:1.6; min-height:100vh; padding-top:64px; }
 
+        /* ── BULK SELECT ── */
+        .bulk-toolbar {
+            display:none; align-items:center; gap:10px; flex-wrap:wrap;
+            padding:10px 14px; margin-bottom:14px;
+            background:linear-gradient(135deg,rgba(59,130,246,0.08),rgba(59,130,246,0.02));
+            border:1px solid rgba(59,130,246,0.3); border-radius:var(--radius);
+        }
+        .bulk-toolbar.visible { display:flex; }
+        .bulk-toolbar-count { font-weight:700; color:#1d4ed8; font-size:0.9rem; }
+        .bulk-del-btn {
+            background:rgba(239,68,68,0.9); color:#fff; border:none;
+            border-radius:8px; padding:7px 16px; cursor:pointer;
+            font-weight:700; font-size:0.85rem; display:flex; align-items:center; gap:6px;
+        }
+        .bulk-approve-btn {
+            background:#22c55e; color:#fff; border:none;
+            border-radius:8px; padding:7px 16px; cursor:pointer;
+            font-weight:700; font-size:0.85rem; display:flex; align-items:center; gap:6px;
+        }
+        .bulk-reject-btn {
+            background:#f59e0b; color:#fff; border:none;
+            border-radius:8px; padding:7px 16px; cursor:pointer;
+            font-weight:700; font-size:0.85rem; display:flex; align-items:center; gap:6px;
+        }
+        .bulk-cancel-btn {
+            background:transparent; color:var(--text-muted); border:1px solid var(--border);
+            border-radius:8px; padding:7px 14px; cursor:pointer; font-size:0.85rem; margin-left:auto;
+        }
+        .select-cb {
+            width:18px; height:18px; accent-color:var(--primary);
+            cursor:pointer; flex-shrink:0;
+        }
+        .select-all-cb { accent-color:#3b82f6; }
+        .cb-cell { width:40px; text-align:center; padding:8px 4px !important; }
+        tr.selected-row { background:rgba(59,130,246,0.06); }
+        .card.selected-card { border-color:#3b82f6; box-shadow:0 0 0 2px rgba(59,130,246,0.3); }
+
         /* ── NAV ── */
         nav {
             background: linear-gradient(to right, rgba(26,4,11,0.92), rgba(74,12,34,0.96));
@@ -807,6 +844,7 @@
         </div>
         <div class="admin-toolbar" id="proverbsToolbar">
             <button class="btn-add" onclick="openProverbModal()"><i class="fa-solid fa-plus"></i> ანდაზის დამატება</button>
+            <button class="btn-add" style="background:linear-gradient(to right,#ef4444,#dc2626);" onclick="bulkDeleteProverbs()"><i class="fa-solid fa-trash"></i> არჩეულის წაშლა</button>
         </div>
         <div class="proverbs-grid" id="proverbsGrid">
             <p style="color:var(--text-muted);grid-column:1/-1;">იტვირთება...</p>
@@ -821,6 +859,7 @@
         </div>
         <div class="admin-toolbar" id="phrasesToolbar">
             <button class="btn-add" onclick="addPhrase()"><i class="fa-solid fa-plus"></i> ბარათის დამატება</button>
+            <button class="btn-add" style="background:linear-gradient(to right,#ef4444,#dc2626);" onclick="bulkDeletePhrases()"><i class="fa-solid fa-trash"></i> არჩეულის წაშლა</button>
         </div>
         <div class="flashcard-container" id="phraseGrid"></div>
     </section>
@@ -830,6 +869,7 @@
         <div class="section-header"><h2>ინტერაქტიული ლექსიკონი</h2></div>
         <div class="admin-toolbar" id="dictToolbar">
             <button class="btn-add" onclick="addDictWord()"><i class="fa-solid fa-plus"></i> სიტყვის დამატება</button>
+            <button class="btn-add" style="background:linear-gradient(to right,#ef4444,#dc2626);" onclick="bulkDeleteDict()"><i class="fa-solid fa-trash"></i> არჩეულის წაშლა</button>
         </div>
         <input type="text" id="dictSearch" class="dict-search" placeholder="🔍 მოძებნეთ სიტყვა..." onkeyup="filterDict()">
         <div id="dictList"></div>
@@ -882,6 +922,7 @@
         </div>
         <div class="admin-toolbar" id="essaysToolbar">
             <button class="btn-add" onclick="toggleEssayUpload()"><i class="fa-solid fa-file-arrow-up"></i> ნაშრომის ატვირთვა</button>
+            <button class="btn-add" style="background:linear-gradient(to right,#ef4444,#dc2626);" onclick="bulkDeleteEssays()"><i class="fa-solid fa-trash"></i> არჩეულის წაშლა</button>
             <div id="essayUploadForm" style="display:none;margin-top:14px;padding-top:14px;border-top:1px dashed rgba(59,130,246,0.5);text-align:left;">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                     <div>
@@ -965,6 +1006,7 @@
         </div>
         <div class="admin-toolbar" id="quizzesToolbar">
             <button class="btn-add" onclick="openQuizEditor()"><i class="fa-solid fa-plus"></i> ახალი ქვიზი</button>
+            <button class="btn-add" style="background:linear-gradient(to right,#ef4444,#dc2626);" onclick="bulkDeleteQuizzes()"><i class="fa-solid fa-trash"></i> არჩეულის წაშლა</button>
         </div>
         <div id="quizList" class="grid"></div>
     </section>
@@ -1716,6 +1758,7 @@ async function loadProverbs() {
         }
         grid.innerHTML = items.map(item => `
             <div class="proverb-card">
+                ${isAdmin ? `<input type="checkbox" class="select-cb" data-cb="proverb" value="${item.id}" onchange="onCbChange('proverb')" style="position:absolute;top:12px;right:12px;">` : ''}
                 <div class="proverb-text">${escapeHtml(item.text)}</div>
                 ${item.meaning ? `<div class="proverb-meaning"><i class="fa-solid fa-circle-info" style="color:var(--accent);margin-right:5px;"></i>${escapeHtml(item.meaning)}</div>` : ''}
                 ${item.source ? `<div class="proverb-source">— ${escapeHtml(item.source)}</div>` : ''}
@@ -1850,6 +1893,7 @@ async function loadDictionary() {
         if (!items.length) { list.innerHTML = '<p style="color:var(--text-muted);">სიტყვები ჯერ არ არის.</p>'; return; }
         list.innerHTML = items.map(item => `
             <div class="dict-item">
+                ${isAdmin ? `<input type="checkbox" class="select-cb" data-cb="dict" value="${item.id}" onchange="onCbChange('dict')">` : ''}
                 <strong>${escapeHtml(item.word)}</strong> — <span>${escapeHtml(item.definition)}</span>
                 ${isAdmin ? `<button class="btn-delete show" onclick="deleteDictWord(${item.id})"><i class="fa-solid fa-trash"></i> წაშლა</button>` : ''}
             </div>
@@ -1889,6 +1933,7 @@ async function loadPhrases() {
             <div class="flashcard" id="fc_${item.id}">
                 <div class="flashcard-inner">
                     <div class="flashcard-front" onclick="document.getElementById('fc_${item.id}').classList.toggle('flipped')">
+                        ${isAdmin ? `<input type="checkbox" class="select-cb" data-cb="phrase" value="${item.id}" onchange="onCbChange('phrase')" onclick="event.stopPropagation()" style="position:absolute;top:8px;left:8px;">` : ''}
                         ${escapeHtml(item.phrase)}
                         ${isAdmin ? `<button class="btn-delete show" style="margin-top:8px;" onclick="event.stopPropagation();deletePhrase(${item.id})"><i class="fa-solid fa-trash"></i></button>` : ''}
                     </div>
@@ -2111,8 +2156,10 @@ async function loadEssays() {
                     <iframe src="https://docs.google.com/viewer?url=${encodeURIComponent(item.fileUrl)}&embedded=true" style="width:100%;height:100%;border:none;pointer-events:none;"></iframe>
                 </div>`;
             }
+            const cb = isAdmin ? `<input type="checkbox" class="select-cb" data-cb="essay" value="${item.id}" onchange="onCbChange('essay')" style="position:absolute;top:8px;left:8px;z-index:10;" onclick="event.stopPropagation()">` : '';
             return `
-            <div class="essay-card">
+            <div class="essay-card" style="position:relative;">
+                ${cb}
                 <div class="essay-preview-wrap" onclick="openEssayView('${escapeHtml(item.fileUrl)}','${escapeHtml(item.title)}','${isPdf?'pdf':isImg?'img':'other'}')">
                     ${previewHtml}
                     <div class="essay-preview-overlay"><span><i class="fa-solid fa-expand"></i> სრულად ნახვა</span></div>
@@ -2232,8 +2279,9 @@ function renderQuizList() {
     el.innerHTML = quizData.map(q => {
         const firstQ = q.questions && q.questions[0] ? q.questions[0].text : '';
         const delBtn = isAdmin ? `<button class="btn-delete show" onclick="deleteQuiz(${q.id})"><i class="fa-solid fa-trash"></i> წაშლა</button>` : '';
+        const cb = isAdmin ? `<input type="checkbox" class="select-cb" data-cb="quiz" value="${q.id}" onchange="onCbChange('quiz')" style="position:absolute;top:12px;right:12px;">` : '';
         const startBtn = !isAdmin && currentUser !== 'სტუმარი' ? `<button class="btn btn-accent" onclick="startQuiz(${q.id})"><i class="fa-solid fa-play"></i> დაწყება</button>` : '';
-        return `<div class="card"><h3>${escapeHtml(q.title)}</h3><p style="color:var(--text-muted);font-size:0.9rem;">${escapeHtml(firstQ)}</p>${startBtn}${delBtn}</div>`;
+        return `<div class="card" style="position:relative;">${cb}<h3>${escapeHtml(q.title)}</h3><p style="color:var(--text-muted);font-size:0.9rem;">${escapeHtml(firstQ)}</p>${startBtn}${delBtn}</div>`;
     }).join('');
 }
 function openQuizEditor() { document.getElementById('quizEditorModal').style.display = 'flex'; }
@@ -2452,8 +2500,16 @@ async function loadPendingUsers() {
             el.innerHTML = '<p style="color:var(--text-muted);font-size:0.9rem;">დასამტკიცებელი მოსწავლეები არ არის ✓</p>';
             return;
         }
-        el.innerHTML = users.map(u => `
+        el.innerHTML = `
+        <div id="bulk-pending" class="bulk-toolbar">
+            <span id="bulk-count-pending" class="bulk-toolbar-count"></span>
+            <button class="bulk-approve-btn" onclick="bulkApproveUsers()"><i class="fa-solid fa-check"></i> დამტკიცება</button>
+            <button class="bulk-reject-btn" onclick="bulkRejectUsers()"><i class="fa-solid fa-xmark"></i> უარყოფა</button>
+            <button class="bulk-cancel-btn" onclick="document.querySelectorAll('[data-cb=pending]').forEach(c=>c.checked=false);updateBulkToolbar('bulk-pending','bulk-count-pending',0)">გაუქმება</button>
+        </div>
+        ${users.map(u => `
             <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
+                <input type="checkbox" class="select-cb" data-cb="pending" value="${u.id}" onchange="onCbChange('pending')">
                 <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#f97316);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.1rem;flex-shrink:0;">
                     ${escapeHtml(u.username.charAt(0).toUpperCase())}
                 </div>
@@ -2470,7 +2526,7 @@ async function loadPendingUsers() {
                     </button>
                 </div>
             </div>
-        `).join('');
+        `).join('')}`;
     } catch (e) { if (el) el.innerHTML = '<p style="color:#b91c1c;">ჩატვირთვა ვერ მოხერხდა.</p>'; }
 }
 
@@ -2498,14 +2554,22 @@ async function loadAllUsers() {
         if (!users.length) { el.innerHTML = '<p style="color:var(--text-muted);">მომხმარებლები არ არის.</p>'; return; }
         const statusColor = { approved:'#22c55e', pending:'#f59e0b', rejected:'#ef4444' };
         const statusLabel = { approved:'დამტკიცებული', pending:'მოლოდინში', rejected:'უარყოფილი' };
-        el.innerHTML = `<div style="overflow:auto;"><table style="width:100%;border-collapse:collapse;">
+        el.innerHTML = `
+        <div id="bulk-user" class="bulk-toolbar">
+            <span id="bulk-count-user" class="bulk-toolbar-count"></span>
+            <button class="bulk-del-btn" onclick="bulkDeleteUsers()"><i class="fa-solid fa-trash"></i> წაშლა</button>
+            <button class="bulk-cancel-btn" onclick="document.querySelectorAll('[data-cb=user]').forEach(c=>c.checked=false);updateBulkToolbar('bulk-user','bulk-count-user',0)">გაუქმება</button>
+        </div>
+        <div style="overflow:auto;"><table style="width:100%;border-collapse:collapse;">
             <thead><tr>
+                <th class="cb-cell"><input type="checkbox" id="master-cb-user" class="select-cb select-all-cb" onchange="toggleSelectAll('user',this)"></th>
                 <th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">მომხმარებელი</th>
                 <th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">სტატუსი</th>
                 <th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">ქმედება</th>
             </tr></thead>
             <tbody>${users.map(u => `
                 <tr>
+                    <td class="cb-cell"><input type="checkbox" class="select-cb" data-cb="user" value="${u.id}|${escapeHtml(u.username)}" onchange="onCbChange('user')"></td>
                     <td style="padding:10px 8px;border-bottom:1px solid var(--border);">
                         <div style="display:flex;align-items:center;gap:10px;">
                             <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--primary-light),var(--primary));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:0.9rem;">
@@ -2606,9 +2670,15 @@ async function refreshTeacherJournal() {
             const avg = r.quizzes ? Math.round(r.avg/r.quizzes) : 0;
             const gs = gradeMap[u] || {}; const sg = groupMap[u] || {};
             const key = encodeURIComponent(u);
-            return `<tr><td style="padding:8px;border-bottom:1px solid var(--border);">${escapeHtml(u)}</td><td style="padding:8px;border-bottom:1px solid var(--border);"><input type="text" value="${escapeHtml(sg.group||'')}" style="width:90px;" onchange="saveStudentGroup(decodeURIComponent('${key}'),this.value)"></td><td style="padding:8px;border-bottom:1px solid var(--border);">${r.assignments}</td><td style="padding:8px;border-bottom:1px solid var(--border);">${r.quizzes}</td><td style="padding:8px;border-bottom:1px solid var(--border);">${avg}%</td><td style="padding:8px;border-bottom:1px solid var(--border);"><input type="number" min="0" max="100" value="${Number(gs.score||0)}" style="width:80px;" onchange="saveGrade(decodeURIComponent('${key}'),this.value,this.parentElement.nextElementSibling.firstElementChild.value)"></td><td style="padding:8px;border-bottom:1px solid var(--border);"><input type="text" value="${escapeHtml(gs.note||'')}" style="width:180px;" onchange="saveGrade(decodeURIComponent('${key}'),this.parentElement.previousElementSibling.firstElementChild.value,this.value)"></td><td style="padding:8px;border-bottom:1px solid var(--border);"><button class="btn btn-sm" onclick="deleteStudentManual(decodeURIComponent('${key}'))">წაშლა</button></td></tr>`;
+            return `<tr><td class="cb-cell"><input type="checkbox" class="select-cb" data-cb="student" value="${escapeHtml(u)}" onchange="onCbChange('student')"></td><td style="padding:8px;border-bottom:1px solid var(--border);">${escapeHtml(u)}</td><td style="padding:8px;border-bottom:1px solid var(--border);"><input type="text" value="${escapeHtml(sg.group||'')}" style="width:90px;" onchange="saveStudentGroup(decodeURIComponent('${key}'),this.value)"></td><td style="padding:8px;border-bottom:1px solid var(--border);">${r.assignments}</td><td style="padding:8px;border-bottom:1px solid var(--border);">${r.quizzes}</td><td style="padding:8px;border-bottom:1px solid var(--border);">${avg}%</td><td style="padding:8px;border-bottom:1px solid var(--border);"><input type="number" min="0" max="100" value="${Number(gs.score||0)}" style="width:80px;" onchange="saveGrade(decodeURIComponent('${key}'),this.value,this.parentElement.nextElementSibling.firstElementChild.value)"></td><td style="padding:8px;border-bottom:1px solid var(--border);"><input type="text" value="${escapeHtml(gs.note||'')}" style="width:180px;" onchange="saveGrade(decodeURIComponent('${key}'),this.parentElement.previousElementSibling.firstElementChild.value,this.value)"></td><td style="padding:8px;border-bottom:1px solid var(--border);"><button class="btn btn-sm" onclick="deleteStudentManual(decodeURIComponent('${key}'))">წაშლა</button></td></tr>`;
         }).join('');
-        container.innerHTML = `<div style="overflow:auto;"><table style="width:100%;border-collapse:collapse;"><thead><tr>${['მოსწავლე','ჯგუფი','დავ.','ქვ.','საშ.','ქულა','კომ.','ქმ.'].map(h=>`<th style="text-align:left;border-bottom:1px solid var(--border);padding:8px;">${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
+        container.innerHTML = `
+        <div id="bulk-student" class="bulk-toolbar">
+            <span id="bulk-count-student" class="bulk-toolbar-count"></span>
+            <button class="bulk-del-btn" onclick="bulkDeleteStudents()"><i class="fa-solid fa-trash"></i> წაშლა</button>
+            <button class="bulk-cancel-btn" onclick="document.querySelectorAll('[data-cb=student]').forEach(c=>c.checked=false);updateBulkToolbar('bulk-student','bulk-count-student',0)">გაუქმება</button>
+        </div>
+        <div style="overflow:auto;"><table style="width:100%;border-collapse:collapse;"><thead><tr><th class="cb-cell"><input type="checkbox" id="master-cb-student" class="select-cb select-all-cb" onchange="toggleSelectAll('student',this)"></th>${['მოსწავლე','ჯგუფი','დავ.','ქვ.','საშ.','ქულა','კომ.','ქმ.'].map(h=>`<th style="text-align:left;border-bottom:1px solid var(--border);padding:8px;">${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
     } catch (e) { container.innerHTML = '<p style="color:#b91c1c;">ჟურნალი ვერ ჩაიტვირთა.</p>'; }
 }
 async function saveGrade(user, score, note) {
@@ -2774,8 +2844,133 @@ async function renderProfileStats() {
 }
 
 /* ═══════════════════════════════════════════════════
-   DROPDOWN NAVIGATION
+   BULK SELECT UTILITIES
 ═══════════════════════════════════════════════════ */
+function updateBulkToolbar(toolbarId, countId, selectedCount) {
+    const tb = document.getElementById(toolbarId);
+    const ct = document.getElementById(countId);
+    if (!tb) return;
+    if (selectedCount > 0) { tb.classList.add('visible'); }
+    else { tb.classList.remove('visible'); }
+    if (ct) ct.textContent = 'არჩეულია: ' + selectedCount;
+}
+
+function getChecked(prefix) {
+    return [...document.querySelectorAll('input[data-cb="' + prefix + '"]:checked')].map(cb => cb.value);
+}
+
+function toggleSelectAll(prefix, masterCb) {
+    document.querySelectorAll('input[data-cb="' + prefix + '"]').forEach(cb => cb.checked = masterCb.checked);
+    const count = masterCb.checked ? document.querySelectorAll('input[data-cb="' + prefix + '"]').length : 0;
+    updateBulkToolbar('bulk-' + prefix, 'bulk-count-' + prefix, count);
+}
+
+function onCbChange(prefix) {
+    const count = getChecked(prefix).length;
+    updateBulkToolbar('bulk-' + prefix, 'bulk-count-' + prefix, count);
+    // sync master checkbox
+    const all = document.querySelectorAll('input[data-cb="' + prefix + '"]');
+    const master = document.getElementById('master-cb-' + prefix);
+    if (master) master.checked = all.length > 0 && count === all.length;
+}
+
+/* ── USERS bulk ── */
+async function bulkDeleteUsers() {
+    const ids = getChecked('user');
+    const usernames = ids.map(v => v.split('|')[1]).filter(Boolean);
+    if (!ids.length || !confirm(usernames.length + ' მომხმარებლის წაშლა?')) return;
+    await Promise.all(usernames.map(u =>
+        fetch('/api/users/by-username/' + encodeURIComponent(u), { method:'DELETE' })
+    ));
+    showToast(usernames.length + ' მომხმარებელი წაიშალა ✓');
+    loadAllUsers(); loadPendingUsers();
+}
+
+async function bulkApproveUsers() {
+    const ids = getChecked('pending').map(v => parseInt(v));
+    if (!ids.length || !confirm(ids.length + ' მომხმარებლის დამტკიცება?')) return;
+    await Promise.all(ids.map(id => fetch('/api/users/' + id + '/approve', { method:'PATCH' })));
+    showToast(ids.length + ' მომხმარებელი დამტკიცდა ✓');
+    loadPendingUsers(); loadAllUsers();
+}
+
+async function bulkRejectUsers() {
+    const ids = getChecked('pending').map(v => parseInt(v));
+    if (!ids.length || !confirm(ids.length + ' მომხმარებლის უარყოფა?')) return;
+    await Promise.all(ids.map(id => fetch('/api/users/' + id + '/reject', { method:'PATCH' })));
+    showToast(ids.length + ' მომხმარებელი უარყოფილია ✓');
+    loadPendingUsers(); loadAllUsers();
+}
+
+/* ── STUDENTS (journal) bulk ── */
+async function bulkDeleteStudents() {
+    const names = getChecked('student');
+    if (!names.length || !confirm(names.length + ' მოსწავლის წაშლა?')) return;
+    await Promise.all(names.map(name => Promise.all([
+        fetch('/api/students/' + encodeURIComponent(name), { method:'DELETE' }),
+        fetch('/api/users/by-username/' + encodeURIComponent(name), { method:'DELETE' }),
+        fetch('/api/assignments/by-author/' + encodeURIComponent(name), { method:'DELETE' }),
+        fetch('/api/grades/by-user/' + encodeURIComponent(name), { method:'DELETE' })
+    ])));
+    showToast(names.length + ' მოსწავლე წაიშალა ✓');
+    refreshTeacherJournal(); loadAllUsers(); loadPendingUsers();
+}
+
+/* ── DICTIONARY bulk ── */
+async function bulkDeleteDict() {
+    const ids = getChecked('dict');
+    if (!ids.length || !confirm(ids.length + ' სიტყვის წაშლა?')) return;
+    await Promise.all(ids.map(id => fetch('/api/dictionary/' + id, { method:'DELETE' })));
+    showToast(ids.length + ' სიტყვა წაიშალა ✓');
+    loadDictionary();
+}
+
+/* ── PHRASES bulk ── */
+async function bulkDeletePhrases() {
+    const ids = getChecked('phrase');
+    if (!ids.length || !confirm(ids.length + ' ფრაზის წაშლა?')) return;
+    await Promise.all(ids.map(id => fetch('/api/phrases/' + id, { method:'DELETE' })));
+    showToast(ids.length + ' ფრაზა წაიშალა ✓');
+    loadPhrases();
+}
+
+/* ── PROVERBS bulk ── */
+async function bulkDeleteProverbs() {
+    const ids = getChecked('proverb');
+    if (!ids.length || !confirm(ids.length + ' ანდაზის წაშლა?')) return;
+    await Promise.all(ids.map(id => fetch('/api/proverbs/' + id, { method:'DELETE' })));
+    showToast(ids.length + ' ანდაზა წაიშალა ✓');
+    loadProverbs();
+}
+
+/* ── MATERIALS bulk ── */
+async function bulkDeleteMaterials() {
+    const ids = getChecked('material');
+    if (!ids.length || !confirm(ids.length + ' მასალის წაშლა?')) return;
+    await Promise.all(ids.map(id => fetch('/api/materials/' + id, { method:'DELETE' })));
+    showToast(ids.length + ' მასალა წაიშალა ✓');
+    loadMaterials();
+}
+
+/* ── QUIZZES bulk ── */
+async function bulkDeleteQuizzes() {
+    const ids = getChecked('quiz');
+    if (!ids.length || !confirm(ids.length + ' ქვიზის წაშლა?')) return;
+    await Promise.all(ids.map(id => fetch('/api/quizzes/' + id, { method:'DELETE' })));
+    showToast(ids.length + ' ქვიზი წაიშალა ✓');
+    loadAndRenderQuizzes();
+}
+
+/* ── ESSAYS bulk ── */
+async function bulkDeleteEssays() {
+    const ids = getChecked('essay');
+    if (!ids.length || !confirm(ids.length + ' ნაშრომის წაშლა?')) return;
+    await Promise.all(ids.map(id => fetch('/api/essays/' + id, { method:'DELETE' })));
+    showToast(ids.length + ' ნაშრომი წაიშალა ✓');
+    loadEssays();
+}
+
+
 function toggleDropdown(btn) {
     const group = btn.closest('.nav-group');
     const isOpen = group.classList.contains('open');
