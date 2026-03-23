@@ -684,12 +684,14 @@ app.post('/api/students', async (req, res) => {
 });
 app.delete('/api/students/:name', async (req, res) => {
   const name = decodeURIComponent(req.params.name);
-  const items = await readCollection('students');
-  const idx = items.findIndex(s => s.name === name);
-  if (idx === -1) return res.status(404).json({ error: 'not found' });
-  items.splice(idx, 1);
-  await writeCollection('students', items);
-  res.json({ ok: true });
+  const client = await _pool.connect();
+  try {
+    await client.query(`DELETE FROM "students" WHERE data->>'name' = $1`, [name]);
+    res.json({ ok: true });
+  } catch(e) {
+    console.error('Delete student error:', e);
+    res.status(500).json({ error: e.message });
+  } finally { client.release(); }
 });
 
 // ─── GRADES ────────────────────────────────────────────────────────────────
