@@ -50,14 +50,28 @@ const upload = multer({ storage: multer.memoryStorage() });
   await ensureCollection('studentActivity');
   await ensureCollection('studentProgress');
   await ensureCollection('essays');
+  // cleanup duplicate users on every start
+  try {
+    const users = await readCollection('users');
+    const seen = new Set();
+    const unique = users.slice().reverse().filter(u => {
+      if (!u.username || seen.has(u.username)) return false;
+      seen.add(u.username);
+      return true;
+    }).reverse();
+    if (unique.length < users.length) {
+      await writeCollection('users', unique);
+      console.log(`✅ Cleaned up ${users.length - unique.length} duplicate users`);
+    }
+  } catch(e) {}
   // cleanup duplicate students on every start
   try {
     const students = await readCollection('students');
-    const seen = new Set();
-    const unique = students.filter(s => { if (!s.name || seen.has(s.name)) return false; seen.add(s.name); return true; });
-    if (unique.length < students.length) {
-      await writeCollection('students', unique);
-      console.log(`✅ Cleaned up ${students.length - unique.length} duplicate students`);
+    const seen2 = new Set();
+    const unique2 = students.filter(s => { if (!s.name || seen2.has(s.name)) return false; seen2.add(s.name); return true; });
+    if (unique2.length < students.length) {
+      await writeCollection('students', unique2);
+      console.log(`✅ Cleaned up ${students.length - unique2.length} duplicate students`);
     }
   } catch(e) {}
 })();
@@ -114,12 +128,26 @@ app.post('/api/login', async (req, res) => {
 // ─── USER APPROVAL ──────────────────────────────────────────────────────────
 app.get('/api/users/pending', async (req, res) => {
   const users = await readCollection('users');
-  res.json(users.filter(u => u.status === 'pending').map(u => ({ id: u.id, username: u.username, status: u.status })));
+  // deduplicate by username, keep latest
+  const seen = new Set();
+  const unique = users.filter(u => u.status === 'pending').reverse().filter(u => {
+    if (seen.has(u.username)) return false;
+    seen.add(u.username);
+    return true;
+  });
+  res.json(unique.map(u => ({ id: u.id, username: u.username, status: u.status })));
 });
 
 app.get('/api/users/all', async (req, res) => {
   const users = await readCollection('users');
-  res.json(users.map(u => ({ id: u.id, username: u.username, status: u.status || 'approved' })));
+  // deduplicate by username, keep latest
+  const seen = new Set();
+  const unique = users.slice().reverse().filter(u => {
+    if (!u.username || seen.has(u.username)) return false;
+    seen.add(u.username);
+    return true;
+  }).reverse();
+  res.json(unique.map(u => ({ id: u.id, username: u.username, status: u.status || 'approved' })));
 });
 
 app.patch('/api/users/:id/approve', async (req, res) => {
@@ -256,6 +284,20 @@ app.get('/api/activity', async (req, res) => {
 });
 
 // cleanup duplicate students
+app.post('/api/users/cleanup', async (req, res) => {
+  try {
+    const users = await readCollection('users');
+    const seen = new Set();
+    const unique = users.slice().reverse().filter(u => {
+      if (!u.username || seen.has(u.username)) return false;
+      seen.add(u.username);
+      return true;
+    }).reverse();
+    await writeCollection('users', unique);
+    res.json({ removed: users.length - unique.length, remaining: unique.length });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post('/api/students/cleanup', async (req, res) => {
   const students = await readCollection('students');
   const seen = new Set();
