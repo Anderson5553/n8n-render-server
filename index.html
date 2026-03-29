@@ -1781,11 +1781,11 @@ async function openStudentProfile(username) {
 
     try {
         const [actResp, gradesResp, groupsResp, attemptsResp, assignsResp] = await Promise.all([
-            fetch('/api/activity',
-            fetch('/api/grades',
-            fetch('/api/student-groups',
-            fetch('/api/quiz-attempts',
-            fetch('/api/assignments/submissions'
+            fetch('/api/activity'),
+            fetch('/api/grades'),
+            fetch('/api/student-groups'),
+            fetch('/api/quiz-attempts'),
+            fetch('/api/assignments/submissions')
         ]);
         const activity = actResp.ok ? await actResp.json() : [];
         const grades = gradesResp.ok ? await gradesResp.json() : [];
@@ -2882,8 +2882,8 @@ async function refreshTeacherJournal() {
     if (!container) return;
     try {
         const [aResp, qResp, gResp, sgResp, stResp] = await Promise.all([
-            fetch('/api/assignments/submissions', fetch('/api/quiz-attempts',
-            fetch('/api/grades', fetch('/api/student-groups', fetch('/api/students'
+            fetch('/api/assignments/submissions', fetch('/api/quiz-attempts'),
+            fetch('/api/grades', fetch('/api/student-groups', fetch('/api/students')
         ]);
         const assignments = aResp.ok ? await aResp.json() : [];
         const attempts = qResp.ok ? await qResp.json() : [];
@@ -2994,9 +2994,9 @@ async function renderProfileStats() {
     if (!el || isAdmin || currentUser === 'სტუმარი') return;
     try {
         const [attResp, gradeResp, editSubResp] = await Promise.all([
-            fetch('/api/quiz-attempts',
-            fetch('/api/grades',
-            fetch('/api/edit-submissions'
+            fetch('/api/quiz-attempts'),
+            fetch('/api/grades'),
+            fetch('/api/edit-submissions')
         ]);
         const attempts = attResp.ok ? await attResp.json() : [];
         const grades   = gradeResp.ok ? await gradeResp.json() : [];
