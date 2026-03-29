@@ -54,8 +54,12 @@
             flex-direction:column; border-radius:16px 16px 0 0;
             box-shadow:0 -8px 40px rgba(0,0,0,0.25);
             overflow:hidden; border:1px solid var(--border);
+            background:var(--white);
         }
         .chat-overlay.open { display:flex; }
+        @media(max-width:480px) {
+            .chat-overlay { right:0; left:0; width:100%; height:85vh; border-radius:16px 16px 0 0; }
+        }
         .chat-header {
             background:linear-gradient(to right,var(--primary),var(--primary-light));
             color:#fff; padding:12px 16px;
@@ -133,7 +137,8 @@
             background:linear-gradient(135deg,#1e293b,#0f172a);
             border-radius:16px 16px 0 0; padding:16px 24px;
             z-index:4500; box-shadow:0 -8px 40px rgba(0,0,0,0.5);
-            color:#fff; align-items:center; gap:16px; min-width:360px;
+            color:#fff; align-items:center; gap:16px;
+            width:100%; max-width:480px; left:0; transform:none;
         }
         .call-bar.active { display:flex; }
         .call-bar-info { flex:1; }
@@ -905,6 +910,8 @@
         <div class="mobile-menu-label">სხვა</div>
         <button class="mobile-menu-item" onclick="mobileNav('forum')"><i class="fa-solid fa-comments"></i> ფორუმი</button>
         <button class="mobile-menu-item" onclick="mobileNav('about')"><i class="fa-solid fa-circle-info"></i> ჩვენ შესახებ</button>
+        <button class="mobile-menu-item student-only" onclick="closeMobileMenu();openChat()" style="display:none;"><i class="fa-solid fa-message"></i> ჩატი</button>
+        <button class="mobile-menu-item teacher-only" onclick="closeMobileMenu();openChat()" style="display:none;"><i class="fa-solid fa-message"></i> ჩატი / დარეკვა</button>
         <button class="mobile-menu-item student-only" onclick="mobileNav('profile')" style="display:none;"><i class="fa-solid fa-user"></i> პროფილი</button>
         <button class="mobile-menu-item teacher-only" onclick="mobileNav('teacherPanel')" style="display:none;"><i class="fa-solid fa-table-list"></i> ჟურნალი</button>
         <button class="mobile-menu-item teacher-only" onclick="mobileNav('studentActivity')" style="display:none;"><i class="fa-solid fa-users"></i> მოსწავლეები</button>
@@ -1186,6 +1193,7 @@
             <button class="btn-add" onclick="openQuizEditor()"><i class="fa-solid fa-plus"></i> ახალი ქვიზი</button>
             <button class="btn-add" style="background:linear-gradient(to right,#6366f1,#4f46e5);" onclick="selectAllCb('quiz')"><i class="fa-solid fa-check-double"></i> ყველა</button>
             <button class="btn-add" style="background:linear-gradient(to right,#ef4444,#dc2626);" onclick="bulkDeleteQuizzes()"><i class="fa-solid fa-trash"></i> არჩეულის წაშლა</button>
+            <button class="btn-add" style="background:linear-gradient(to right,#f59e0b,#d97706);" onclick="cleanupQuizzes(this)"><i class="fa-solid fa-broom"></i> დუბლიკატების გასუფთავება</button>
         </div>
         <div id="quizList" class="grid"></div>
     </section>
@@ -3024,9 +3032,18 @@ async function renderProfileStats() {
     } catch (e) { console.error(e); }
 }
 
-/* ═══════════════════════════════════════════════════
-   BULK SELECT UTILITIES
-═══════════════════════════════════════════════════ */
+async function cleanupQuizzes(btn) {
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> გასუფთავება...'; }
+    try {
+        const resp = await fetch('/api/quizzes/cleanup', { method: 'POST' });
+        const data = resp.ok ? await resp.json() : {};
+        showToast(`გასუფთავდა: ${data.removed || 0} დუბლიკატი ✓`);
+        loadAndRenderQuizzes();
+    } catch(e) { alert('შეცდომა!'); }
+    finally { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-broom"></i> დუბლიკატების გასუფთავება'; } }
+}
+
+
 function selectAllCb(prefix) {
     const cbs = document.querySelectorAll('input[data-cb="' + prefix + '"]');
     const allChecked = [...cbs].every(cb => cb.checked);
