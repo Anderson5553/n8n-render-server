@@ -1985,7 +1985,6 @@ async function editProverb(id) {
 }
 
 async function deleteProverb(id) {
-    if (!confirm('წავშალო?')) return;
     try {
         const resp = await fetch('/api/proverbs/' + id, { method: 'DELETE' });
         if (!resp.ok) throw new Error(await resp.text());
@@ -2111,7 +2110,6 @@ async function addDictWord() {
     showToast('სიტყვა დაემატა ✓'); loadDictionary();
 }
 async function deleteDictWord(id) {
-    if (!confirm('წავშალო?')) return;
     try {
         const resp = await fetch('/api/dictionary/' + id, { method: 'DELETE' });
         if (!resp.ok) throw new Error(await resp.text());
@@ -2160,7 +2158,6 @@ async function addPhrase() {
     showToast('ფრაზა დაემატა ✓'); loadPhrases();
 }
 async function deletePhrase(id) {
-    if (!confirm('წავშალო?')) return;
     try {
         const resp = await fetch('/api/phrases/' + id, { method: 'DELETE' });
         if (!resp.ok) throw new Error(await resp.text());
@@ -2202,7 +2199,6 @@ function createMaterialCardHtml(item) {
     return `<div class="card"><h3>${title}</h3>${preview}<a href="${fileUrl}" download target="_blank" class="btn" style="margin-top:10px;"><i class="fa-solid fa-file-arrow-down"></i> ჩამოტვირთვა</a>${delBtn}</div>`;
 }
 async function deleteMaterial(id) {
-    if (!confirm('წავშალო?')) return;
     try {
         const resp = await fetch('/api/materials/' + id, { method: 'DELETE' });
         if (!resp.ok) throw new Error(await resp.text());
@@ -2303,7 +2299,6 @@ async function submitAssignment() {
     } catch (e) { alert('შეცდომა!'); }
 }
 async function deleteAssignment(id) {
-    if (!confirm('წავშალო?')) return;
     try {
         const resp = await fetch('/api/assignments/submissions/' + id, { method: 'DELETE' });
         if (!resp.ok) throw new Error(await resp.text());
@@ -2434,7 +2429,6 @@ function closeEssayView() {
 }
 
 async function deleteEssay(id) {
-    if (!confirm('წავშალო?')) return;
     try {
         const resp = await fetch('/api/essays/' + id, { method: 'DELETE' });
         if (!resp.ok) throw new Error(await resp.text());
@@ -2482,7 +2476,6 @@ async function addComment(postId) {
     awardPoints(3); loadForum();
 }
 async function deletePost(id) {
-    if (!confirm('წავშალო?')) return;
     await fetch('/api/forum/posts/' + id, { method: 'DELETE' });
     showToast('წაიშალა ✓'); loadForum();
 }
@@ -2527,7 +2520,6 @@ async function saveQuiz() {
     loadAndRenderQuizzes(); loadNotifications();
 }
 async function deleteQuiz(id) {
-    if (!confirm('წავშალო?')) return;
     try {
         const resp = await fetch('/api/quizzes/' + id, { method: 'DELETE' });
         if (!resp.ok) throw new Error(await resp.text());
@@ -2670,7 +2662,6 @@ async function loadEditTasks() {
     } catch (e) {}
 }
 async function deleteEditTask(id) {
-    if (!confirm('წავშალო?')) return;
     try {
         const resp = await fetch('/api/edit-tasks/' + id, { method: 'DELETE' });
         if (!resp.ok) throw new Error(await resp.text());
@@ -2835,7 +2826,6 @@ async function approveUser(id) {
 }
 
 async function rejectUser(id) {
-    if (!confirm('უარყოფა?')) return;
     await fetch('/api/users/' + id + '/reject', { method: 'PATCH' });
     showToast('უარყოფილია ✓');
     loadPendingUsers();
@@ -2843,7 +2833,6 @@ async function rejectUser(id) {
 }
 
 async function deleteUserAccount(id, username) {
-    if (!confirm('სრულად წავშალო ანგარიში ' + (username||'') + '?')) return;
     // delete by username — most reliable
     if (username) {
         await fetch('/api/users/by-username/' + encodeURIComponent(username), { method: 'DELETE' });
@@ -2935,7 +2924,6 @@ async function addStudentManual() {
     showToast('მოსწავლე დაემატა ✓'); refreshTeacherJournal();
 }
 async function deleteStudentManual(name) {
-    if (!confirm('წავშალო ' + name + '?')) return;
     const client_name = name;
     // 1. students collection
     await fetch('/api/students/' + encodeURIComponent(client_name), { method: 'DELETE' });
@@ -2978,7 +2966,6 @@ async function addManualJournalRow() {
     showToast('სტრიქონი დაემატა ✓'); loadManualJournal();
 }
 async function deleteManualJournalRow(id) {
-    if (!confirm('წავშალო?')) return;
     try {
         const resp = await fetch('/api/manual-journal/' + id, { method: 'DELETE' });
         if (!resp.ok) throw new Error(await resp.text());
@@ -3131,7 +3118,6 @@ function onCbChange(prefix) {
 async function bulkDeleteUsers() {
     const ids = getChecked('user');
     const usernames = ids.map(v => v.split('|')[1]).filter(Boolean);
-    if (!ids.length || !confirm(usernames.length + ' მომხმარებლის წაშლა?')) return;
     await Promise.all(usernames.map(u =>
         fetch('/api/users/by-username/' + encodeURIComponent(u), { method:'DELETE' })
     ));
@@ -3141,7 +3127,6 @@ async function bulkDeleteUsers() {
 
 async function bulkApproveUsers() {
     const ids = getChecked('pending').map(v => parseInt(v));
-    if (!ids.length || !confirm(ids.length + ' მომხმარებლის დამტკიცება?')) return;
     await Promise.all(ids.map(id => fetch('/api/users/' + id + '/approve', { method:'PATCH' })));
     showToast(ids.length + ' მომხმარებელი დამტკიცდა ✓');
     loadPendingUsers(); loadAllUsers();
@@ -3149,7 +3134,6 @@ async function bulkApproveUsers() {
 
 async function bulkRejectUsers() {
     const ids = getChecked('pending').map(v => parseInt(v));
-    if (!ids.length || !confirm(ids.length + ' მომხმარებლის უარყოფა?')) return;
     await Promise.all(ids.map(id => fetch('/api/users/' + id + '/reject', { method:'PATCH' })));
     showToast(ids.length + ' მომხმარებელი უარყოფილია ✓');
     loadPendingUsers(); loadAllUsers();
@@ -3158,7 +3142,6 @@ async function bulkRejectUsers() {
 /* ── STUDENTS (journal) bulk ── */
 async function bulkDeleteStudents() {
     const names = getChecked('student');
-    if (!names.length || !confirm(names.length + ' მოსწავლის წაშლა?')) return;
     await Promise.all(names.map(name => Promise.all([
         fetch('/api/students/' + encodeURIComponent(name), { method:'DELETE' }),
         fetch('/api/users/by-username/' + encodeURIComponent(name), { method:'DELETE' }),
@@ -3172,7 +3155,6 @@ async function bulkDeleteStudents() {
 /* ── DICTIONARY bulk ── */
 async function bulkDeleteDict() {
     const ids = getChecked('dict');
-    if (!ids.length || !confirm(ids.length + ' სიტყვის წაშლა?')) return;
     await Promise.all(ids.map(id => fetch('/api/dictionary/' + id, { method:'DELETE' })));
     showToast(ids.length + ' სიტყვა წაიშალა ✓');
     loadDictionary();
@@ -3181,7 +3163,6 @@ async function bulkDeleteDict() {
 /* ── PHRASES bulk ── */
 async function bulkDeletePhrases() {
     const ids = getChecked('phrase');
-    if (!ids.length || !confirm(ids.length + ' ფრაზის წაშლა?')) return;
     await Promise.all(ids.map(id => fetch('/api/phrases/' + id, { method:'DELETE' })));
     showToast(ids.length + ' ფრაზა წაიშალა ✓');
     loadPhrases();
@@ -3190,7 +3171,6 @@ async function bulkDeletePhrases() {
 /* ── PROVERBS bulk ── */
 async function bulkDeleteProverbs() {
     const ids = getChecked('proverb');
-    if (!ids.length || !confirm(ids.length + ' ანდაზის წაშლა?')) return;
     await Promise.all(ids.map(id => fetch('/api/proverbs/' + id, { method:'DELETE' })));
     showToast(ids.length + ' ანდაზა წაიშალა ✓');
     loadProverbs();
@@ -3199,7 +3179,6 @@ async function bulkDeleteProverbs() {
 /* ── MATERIALS bulk ── */
 async function bulkDeleteMaterials() {
     const ids = getChecked('material');
-    if (!ids.length || !confirm(ids.length + ' მასალის წაშლა?')) return;
     await Promise.all(ids.map(id => fetch('/api/materials/' + id, { method:'DELETE' })));
     showToast(ids.length + ' მასალა წაიშალა ✓');
     loadMaterials();
@@ -3208,7 +3187,6 @@ async function bulkDeleteMaterials() {
 /* ── QUIZZES bulk ── */
 async function bulkDeleteQuizzes() {
     const ids = getChecked('quiz');
-    if (!ids.length || !confirm(ids.length + ' ქვიზის წაშლა?')) return;
     await Promise.all(ids.map(id => fetch('/api/quizzes/' + id, { method:'DELETE' })));
     showToast(ids.length + ' ქვიზი წაიშალა ✓');
     loadAndRenderQuizzes();
@@ -3217,7 +3195,6 @@ async function bulkDeleteQuizzes() {
 /* ── ESSAYS bulk ── */
 async function bulkDeleteEssays() {
     const ids = getChecked('essay');
-    if (!ids.length || !confirm(ids.length + ' ნაშრომის წაშლა?')) return;
     await Promise.all(ids.map(id => fetch('/api/essays/' + id, { method:'DELETE' })));
     showToast(ids.length + ' ნაშრომი წაიშალა ✓');
     loadEssays();
