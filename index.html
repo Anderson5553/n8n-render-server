@@ -825,7 +825,7 @@
         <div class="nav-group">
             <button class="nav-group-btn" onclick="toggleDropdown(this)"><i class="fa-solid fa-pencil"></i> დავალება <i class="fa-solid fa-chevron-down chevron"></i></button>
             <div class="nav-dropdown">
-                <button onclick="closeDropdowns();switchTab('lessonPackages')"><i class="fa-solid fa-book-open"></i> თემის პაკეტები</button>
+                <button onclick="closeDropdowns();switchTab('lessonPackages')"><i class="fa-solid fa-book-open"></i> ეროვნულის საკითხები</button>
                 <button onclick="closeDropdowns();switchTab('assignments')"><i class="fa-solid fa-file-arrow-up"></i> დავალებები</button>
                 <button onclick="closeDropdowns();switchTab('essays')"><i class="fa-solid fa-award"></i> მაღალქულიანი ესეები</button>
                 <button onclick="closeDropdowns();switchTab('editTasks')"><i class="fa-solid fa-highlighter"></i> რედაქტირება</button>
@@ -3593,16 +3593,16 @@ window.onload = async function() {
 <!-- ═══ LESSON PACKAGES SECTION ═══ -->
 <section id="lessonPackages">
   <div class="section-header">
-    <h2><i class="fa-solid fa-book-open" style="color:var(--accent);margin-right:8px;"></i>თემის პაკეტები</h2>
+    <h2><i class="fa-solid fa-book-open" style="color:var(--accent);margin-right:8px;"></i>ეროვნულის საკითხები</h2>
   </div>
 
   <!-- Teacher controls -->
   <div id="lpTeacherControls" style="display:none;margin-bottom:20px;">
     <button class="btn" onclick="toggleLPForm()" style="background:var(--accent);color:#000;font-weight:600;">
-      <i class="fa-solid fa-plus"></i> ახალი პაკეტი
+      <i class="fa-solid fa-plus"></i> ახალი საკითხი
     </button>
     <div id="lpCreateForm" style="display:none;background:var(--card);border-radius:12px;padding:20px;margin-top:16px;max-width:500px;">
-      <h3 style="margin-bottom:12px;">ახალი თემის პაკეტი</h3>
+      <h3 style="margin-bottom:12px;">ახალი ეროვნულის საკითხი</h3>
       <input id="lpTitle" type="text" placeholder="სათაური (მაგ. იგი — ვეფხისტყაოსანი)" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);margin-bottom:10px;">
       <input id="lpSubject" type="text" placeholder="საგანი (მაგ. ქართული ლიტერატურა)" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);margin-bottom:10px;">
       <textarea id="lpDesc" placeholder="მოკლე აღწერა" rows="2" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);margin-bottom:10px;resize:vertical;"></textarea>
@@ -3640,7 +3640,7 @@ function renderLPList() {
   document.getElementById('lpTeacherControls').style.display = isAdmin ? 'block' : 'none';
 
   if (!lpPackages.length) {
-    el.innerHTML = '<p style="color:var(--text-muted);">პაკეტები ჯერ არ არის.</p>';
+    el.innerHTML = '<p style="color:var(--text-muted);">საკითხები ჯერ არ არის.</p>';
     return;
   }
 
@@ -3694,22 +3694,61 @@ function openLPDetail(id) {
       <h3 style="margin-bottom:14px;">მასალის დამატება</h3>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
         <select id="lpItemType" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);" onchange="showLPItemFields()">
-          <option value="text">📝 ტექსტი</option>
+          <option value="text">📝 ტექსტი / მოთხრობა</option>
           <option value="video">🎬 YouTube ვიდეო</option>
-          <option value="file">📎 ფაილი/PDF</option>
+          <option value="file">📎 ფაილი / PDF</option>
+          <option value="quiz">❓ ქვიზი</option>
+          <option value="assignment">📋 დავალება (ფაილის ატვირთვა)</option>
+          <option value="editTask">✏️ რედაქტირების დავალება</option>
+          <option value="note">💡 შენიშვნა / განმარტება</option>
         </select>
         <input id="lpItemTitle" type="text" placeholder="სათაური" style="flex:1;min-width:180px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
       </div>
+
+      <!-- TEXT -->
       <div id="lpItemTextArea" style="margin-bottom:10px;">
-        <textarea id="lpItemContent" placeholder="ტექსტი / მოთხრობა..." rows="5" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);resize:vertical;"></textarea>
+        <textarea id="lpItemContent" placeholder="ტექსტი / მოთხრობა / განმარტება..." rows="6" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);resize:vertical;font-family:inherit;line-height:1.7;"></textarea>
       </div>
+
+      <!-- VIDEO -->
       <div id="lpItemVideoArea" style="display:none;margin-bottom:10px;">
-        <input id="lpItemUrl" type="text" placeholder="YouTube URL" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+        <input id="lpItemUrl" type="text" placeholder="YouTube URL (მაგ. https://youtu.be/...)" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
       </div>
+
+      <!-- FILE -->
       <div id="lpItemFileArea" style="display:none;margin-bottom:10px;">
+        <label style="color:var(--text-muted);font-size:0.9rem;display:block;margin-bottom:6px;">PDF, Word, სურათი ან სხვა ფაილი</label>
         <input id="lpItemFile" type="file" style="width:100%;padding:8px;">
       </div>
-      <button onclick="addLPItem(${pkg.id})" style="background:var(--accent);color:#000;font-weight:600;padding:8px 20px;border-radius:8px;border:none;cursor:pointer;">
+
+      <!-- QUIZ -->
+      <div id="lpItemQuizArea" style="display:none;margin-bottom:10px;">
+        <label style="color:var(--text-muted);font-size:0.9rem;display:block;margin-bottom:6px;">აირჩიე არსებული ქვიზი</label>
+        <select id="lpItemQuizId" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+          <option value="">— ქვიზის არჩევა —</option>
+        </select>
+        <p style="color:var(--text-muted);font-size:0.82rem;margin-top:6px;">* ქვიზები "ქვიზები" განყოფილებაში იქმნება</p>
+      </div>
+
+      <!-- ASSIGNMENT -->
+      <div id="lpItemAssignmentArea" style="display:none;margin-bottom:10px;">
+        <textarea id="lpItemAssignmentDesc" placeholder="დავალების აღწერა — რა უნდა გააკეთოს მოსწავლემ?" rows="3" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);resize:vertical;margin-bottom:8px;"></textarea>
+        <label style="color:var(--text-muted);font-size:0.9rem;display:block;margin-bottom:6px;">დავალების ფაილი (არასავალდებულო)</label>
+        <input id="lpItemAssignmentFile" type="file" style="width:100%;padding:8px;">
+      </div>
+
+      <!-- EDIT TASK -->
+      <div id="lpItemEditTaskArea" style="display:none;margin-bottom:10px;">
+        <textarea id="lpItemSourceText" placeholder="დასარედაქტირებელი ტექსტი (შეცდომებით)" rows="4" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);resize:vertical;margin-bottom:8px;font-family:inherit;"></textarea>
+        <textarea id="lpItemCorrectText" placeholder="სწორი ვარიანტი (სურვილისამებრ — ავტოშემოწმებისთვის)" rows="4" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);resize:vertical;font-family:inherit;"></textarea>
+      </div>
+
+      <!-- NOTE -->
+      <div id="lpItemNoteArea" style="display:none;margin-bottom:10px;">
+        <textarea id="lpItemNote" placeholder="შენიშვნა, რჩევა ან მნიშვნელოვანი ინფო..." rows="3" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);resize:vertical;border-left:3px solid var(--accent);"></textarea>
+      </div>
+
+      <button onclick="addLPItem(${pkg.id})" style="background:var(--accent);color:#000;font-weight:600;padding:10px 24px;border-radius:8px;border:none;cursor:pointer;font-size:0.95rem;">
         <i class="fa-solid fa-plus"></i> დამატება
       </button>
     </div>
@@ -3721,31 +3760,100 @@ function openLPDetail(id) {
 
 function showLPItemFields() {
   const type = document.getElementById('lpItemType').value;
-  document.getElementById('lpItemTextArea').style.display = type === 'text' ? 'block' : 'none';
-  document.getElementById('lpItemVideoArea').style.display = type === 'video' ? 'block' : 'none';
-  document.getElementById('lpItemFileArea').style.display = type === 'file' ? 'block' : 'none';
+  document.getElementById('lpItemTextArea').style.display       = type === 'text' ? 'block' : 'none';
+  document.getElementById('lpItemVideoArea').style.display      = type === 'video' ? 'block' : 'none';
+  document.getElementById('lpItemFileArea').style.display       = type === 'file' ? 'block' : 'none';
+  document.getElementById('lpItemQuizArea').style.display       = type === 'quiz' ? 'block' : 'none';
+  document.getElementById('lpItemAssignmentArea').style.display = type === 'assignment' ? 'block' : 'none';
+  document.getElementById('lpItemEditTaskArea').style.display   = type === 'editTask' ? 'block' : 'none';
+  document.getElementById('lpItemNoteArea').style.display       = type === 'note' ? 'block' : 'none';
+
+  // Load quizzes when quiz type selected
+  if (type === 'quiz') {
+    fetch('/api/quizzes').then(r => r.json()).then(quizzes => {
+      const sel = document.getElementById('lpItemQuizId');
+      sel.innerHTML = '<option value="">— ქვიზის არჩევა —</option>' +
+        quizzes.map(q => `<option value="${q.id}">${escapeHtml(q.title)}</option>`).join('');
+    });
+  }
 }
 
 function renderLPItem(item, pkgId) {
-  let content = '';
+  const icon = {text:'📝', video:'🎬', file:'📎', quiz:'❓', assignment:'📋', editTask:'✏️', note:'💡'}[item.type] || '📄';
+  const typeLabel = {text:'ტექსტი', video:'ვიდეო', file:'ფაილი', quiz:'ქვიზი', assignment:'დავალება', editTask:'რედაქტირება', note:'შენიშვნა'}[item.type] || '';
+
+  let body = '';
+
   if (item.type === 'text') {
-    content = `<div style="background:var(--bg);border-radius:8px;padding:14px;margin-top:10px;white-space:pre-wrap;line-height:1.7;">${escapeHtml(item.content || '')}</div>`;
+    body = `<div style="background:var(--bg);border-radius:8px;padding:16px;margin-top:12px;white-space:pre-wrap;line-height:1.8;font-size:0.95rem;">${escapeHtml(item.content || '')}</div>`;
+
   } else if (item.type === 'video') {
     const videoId = extractYouTubeId(item.url || '');
-    content = videoId ? `<div style="margin-top:10px;border-radius:10px;overflow:hidden;"><iframe width="100%" height="315" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe></div>` : `<a href="${escapeHtml(item.url)}" target="_blank" style="color:var(--accent);">${escapeHtml(item.url)}</a>`;
+    body = videoId
+      ? `<div style="margin-top:12px;border-radius:10px;overflow:hidden;aspect-ratio:16/9;"><iframe width="100%" height="100%" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen style="display:block;"></iframe></div>`
+      : `<a href="${escapeHtml(item.url)}" target="_blank" style="color:var(--accent);margin-top:8px;display:inline-block;">${escapeHtml(item.url)}</a>`;
+
   } else if (item.type === 'file') {
-    content = `<a href="${escapeHtml(item.fileUrl)}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;margin-top:10px;padding:10px 16px;background:rgba(250,204,21,0.1);border-radius:8px;color:var(--accent);text-decoration:none;"><i class="fa-solid fa-file-arrow-down"></i>${escapeHtml(item.originalName || 'ფაილი')}</a>`;
+    const ext = (item.originalName || '').split('.').pop().toLowerCase();
+    const isPdf = ext === 'pdf';
+    const isImg = ['jpg','jpeg','png','gif','webp'].includes(ext);
+    if (isImg) {
+      body = `<img src="${escapeHtml(item.fileUrl)}" style="max-width:100%;border-radius:8px;margin-top:12px;" />`;
+    } else {
+      body = `<a href="${escapeHtml(item.fileUrl)}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:10px 18px;background:rgba(250,204,21,0.1);border:1px solid rgba(250,204,21,0.3);border-radius:8px;color:var(--accent);text-decoration:none;font-weight:500;">
+        <i class="fa-solid fa-${isPdf ? 'file-pdf' : 'file-arrow-down'}"></i>${escapeHtml(item.originalName || 'ფაილი')}
+      </a>`;
+    }
+
+  } else if (item.type === 'quiz') {
+    body = `<div style="margin-top:12px;padding:14px;background:rgba(250,204,21,0.07);border-radius:8px;border:1px solid rgba(250,204,21,0.2);">
+      <p style="margin:0 0 10px;color:var(--text-muted);font-size:0.9rem;">ქვიზი ჩართულია ამ საკითხში</p>
+      <button onclick="openQuizFromLP(${item.quizId})" style="background:var(--accent);color:#000;font-weight:600;padding:8px 20px;border-radius:8px;border:none;cursor:pointer;">
+        <i class="fa-solid fa-play"></i> ქვიზის დაწყება
+      </button>
+    </div>`;
+
+  } else if (item.type === 'assignment') {
+    body = `<div style="margin-top:12px;padding:14px;background:rgba(99,102,241,0.07);border-radius:8px;border:1px solid rgba(99,102,241,0.2);">
+      <p style="margin:0 0 10px;white-space:pre-wrap;line-height:1.7;">${escapeHtml(item.content || '')}</p>
+      ${item.fileUrl ? `<a href="${escapeHtml(item.fileUrl)}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(250,204,21,0.1);border-radius:8px;color:var(--accent);text-decoration:none;font-size:0.9rem;"><i class="fa-solid fa-file-arrow-down"></i> დავალების ფაილი</a>` : ''}
+      ${!isAdmin ? `<div style="margin-top:12px;">
+        <input type="file" id="assignUpload_${item.id}" style="margin-bottom:8px;width:100%;">
+        <button onclick="submitLPAssignment(${pkgId}, ${item.id})" style="background:var(--accent);color:#000;font-weight:600;padding:8px 20px;border-radius:8px;border:none;cursor:pointer;">
+          <i class="fa-solid fa-upload"></i> დავალების გაგზავნა
+        </button>
+      </div>` : ''}
+    </div>`;
+
+  } else if (item.type === 'editTask') {
+    body = `<div style="margin-top:12px;padding:14px;background:rgba(16,185,129,0.07);border-radius:8px;border:1px solid rgba(16,185,129,0.2);">
+      <p style="margin:0 0 8px;color:var(--text-muted);font-size:0.85rem;">დაარედაქტირე ქვემოთ მოცემული ტექსტი:</p>
+      <div style="background:var(--bg);border-radius:6px;padding:12px;margin-bottom:12px;white-space:pre-wrap;line-height:1.8;font-family:inherit;">${escapeHtml(item.content || '')}</div>
+      ${!isAdmin ? `<textarea id="editAnswer_lp_${item.id}" rows="5" placeholder="შეიყვანე შენი გამოსწორებული ვარიანტი..." style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);resize:vertical;font-family:inherit;margin-bottom:8px;"></textarea>
+      <button onclick="submitLPEditTask(${pkgId}, ${item.id})" style="background:var(--accent);color:#000;font-weight:600;padding:8px 20px;border-radius:8px;border:none;cursor:pointer;">
+        <i class="fa-solid fa-paper-plane"></i> გაგზავნა
+      </button>` : `<div style="color:var(--text-muted);font-size:0.85rem;">სწორი ვარიანტი: <span style="color:var(--text);">${escapeHtml(item.correctText || 'არ არის მითითებული')}</span></div>`}
+    </div>`;
+
+  } else if (item.type === 'note') {
+    body = `<div style="margin-top:10px;padding:14px;background:rgba(250,204,21,0.08);border-left:4px solid var(--accent);border-radius:0 8px 8px 0;">
+      <p style="margin:0;white-space:pre-wrap;line-height:1.7;">${escapeHtml(item.content || '')}</p>
+    </div>`;
   }
 
-  const icon = {text:'📝', video:'🎬', file:'📎', quiz:'❓', assignment:'📋'}[item.type] || '📄';
-
   return `
-    <div style="background:var(--card);border-radius:10px;padding:16px;margin-bottom:12px;">
+    <div style="background:var(--card);border-radius:12px;padding:18px;margin-bottom:14px;border:1px solid var(--border);">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-        <span style="font-weight:600;">${icon} ${escapeHtml(item.title)}</span>
-        ${isAdmin ? `<button onclick="deleteLPItem(${pkgId}, ${item.id})" style="background:rgba(239,68,68,0.15);color:#ef4444;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;"><i class="fa-solid fa-trash"></i></button>` : ''}
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:1.3rem;">${icon}</span>
+          <div>
+            <div style="font-weight:600;font-size:1rem;">${escapeHtml(item.title)}</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);">${typeLabel}</div>
+          </div>
+        </div>
+        ${isAdmin ? `<button onclick="deleteLPItem(${pkgId}, ${item.id})" style="background:rgba(239,68,68,0.15);color:#ef4444;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:0.82rem;"><i class="fa-solid fa-trash"></i></button>` : ''}
       </div>
-      ${content}
+      ${body}
     </div>
   `;
 }
@@ -3772,7 +3880,7 @@ async function createLessonPackage() {
       body: JSON.stringify({title, subject, description})
     });
     if (!resp.ok) throw new Error(await resp.text());
-    showToast('პაკეტი შეიქმნა ✓');
+    showToast('საკითხი შეიქმნა ✓');
     document.getElementById('lpTitle').value = '';
     document.getElementById('lpSubject').value = '';
     document.getElementById('lpDesc').value = '';
@@ -3793,11 +3901,30 @@ async function addLPItem(pkgId) {
   if (type === 'text') {
     formData.append('content', document.getElementById('lpItemContent').value);
   } else if (type === 'video') {
-    formData.append('url', document.getElementById('lpItemUrl').value.trim());
+    const url = document.getElementById('lpItemUrl').value.trim();
+    if (!url) { alert('YouTube URL სავალდებულოა'); return; }
+    formData.append('url', url);
   } else if (type === 'file') {
     const fileInput = document.getElementById('lpItemFile');
     if (!fileInput.files[0]) { alert('ფაილი სავალდებულოა'); return; }
     formData.append('file', fileInput.files[0]);
+  } else if (type === 'quiz') {
+    const quizId = document.getElementById('lpItemQuizId').value;
+    if (!quizId) { alert('ქვიზი სავალდებულოა'); return; }
+    formData.append('quizId', quizId);
+  } else if (type === 'assignment') {
+    const desc = document.getElementById('lpItemAssignmentDesc').value.trim();
+    if (!desc) { alert('დავალების აღწერა სავალდებულოა'); return; }
+    formData.append('content', desc);
+    const fileInput = document.getElementById('lpItemAssignmentFile');
+    if (fileInput.files[0]) formData.append('file', fileInput.files[0]);
+  } else if (type === 'editTask') {
+    const sourceText = document.getElementById('lpItemSourceText').value.trim();
+    if (!sourceText) { alert('ტექსტი სავალდებულოა'); return; }
+    formData.append('content', sourceText);
+    formData.append('correctText', document.getElementById('lpItemCorrectText').value.trim());
+  } else if (type === 'note') {
+    formData.append('content', document.getElementById('lpItemNote').value.trim());
   }
 
   try {
@@ -3806,13 +3933,55 @@ async function addLPItem(pkgId) {
     });
     if (!resp.ok) throw new Error(await resp.text());
     showToast('მასალა დაემატა ✓');
-    document.getElementById('lpItemTitle').value = '';
-    document.getElementById('lpItemContent').value = '';
-    document.getElementById('lpItemUrl').value = '';
-    document.getElementById('lpItemFile').value = '';
+    ['lpItemTitle','lpItemContent','lpItemUrl','lpItemAssignmentDesc','lpItemSourceText','lpItemCorrectText','lpItemNote'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    ['lpItemFile','lpItemAssignmentFile'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
     await loadLessonPackages();
     openLPDetail(pkgId);
   } catch(e) { alert('შეცდომა: ' + e.message); }
+}
+
+async function submitLPAssignment(pkgId, itemId) {
+  const fileInput = document.getElementById('assignUpload_' + itemId);
+  if (!fileInput || !fileInput.files[0]) { alert('ფაილი სავალდებულოა'); return; }
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+  formData.append('title', 'საკითხი #' + pkgId + ' — დავალება');
+  formData.append('author', '👤 ' + (currentUsername || currentUser));
+  formData.append('originalFilename', fileInput.files[0].name);
+  try {
+    const resp = await fetch('/api/assignments/upload', { method: 'POST', body: formData });
+    if (!resp.ok) throw new Error(await resp.text());
+    showToast('დავალება გაიგზავნა ✓');
+    fileInput.value = '';
+  } catch(e) { alert('შეცდომა: ' + e.message); }
+}
+
+async function submitLPEditTask(pkgId, itemId) {
+  const input = document.getElementById('editAnswer_lp_' + itemId);
+  const text = input ? input.value.trim() : '';
+  if (!text) { alert('ჩაწერე ტექსტი'); return; }
+  try {
+    const resp = await fetch('/api/edit-submissions', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ taskId: itemId, student: currentUsername || currentUser, text })
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    showToast('გაიგზავნა ✓');
+    if (input) input.value = '';
+  } catch(e) { alert('შეცდომა: ' + e.message); }
+}
+
+function openQuizFromLP(quizId) {
+  switchTab('quizzes');
+  setTimeout(() => {
+    const btn = document.querySelector(`[onclick="startQuiz(${quizId})"]`);
+    if (btn) btn.click();
+  }, 500);
 }
 
 async function toggleLPPublish(id) {
