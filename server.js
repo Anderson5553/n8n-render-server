@@ -1,3 +1,19 @@
+// ── Catch ANY crash and log it before exit ──────────────────────────────────
+process.on('uncaughtException', (err) => {
+  console.error('💥 UNCAUGHT EXCEPTION:', err.message);
+  console.error(err.stack);
+  process.exit(1);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('💥 UNHANDLED REJECTION:', reason);
+});
+
+console.log('▶ Starting server.js...');
+console.log('▶ NODE_ENV:', process.env.NODE_ENV);
+console.log('▶ DATABASE_URL set:', !!process.env.DATABASE_URL);
+console.log('▶ SUPABASE_URL set:', !!process.env.SUPABASE_URL);
+console.log('▶ PORT:', process.env.PORT || 10000);
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
