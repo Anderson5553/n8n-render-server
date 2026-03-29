@@ -1497,7 +1497,7 @@ function closeGradeToast() {
 async function checkForGradeUpdates() {
     if (isAdmin || !currentUsername) return;
     try {
-        const resp = await fetch('/api/grades')
+        const resp = await fetch('/api/grades');
         const grades = resp.ok ? await resp.json() : [];
         const mine = grades.find(g => g.user === currentUsername);
         if (!mine) return;
@@ -1708,7 +1708,7 @@ async function loadStudentActivity() {
     if (!grid) return;
     grid.innerHTML = '<p style="color:var(--text-muted);">იტვირთება...</p>';
     try {
-        const resp = await fetch('/api/activity')
+        const resp = await fetch('/api/activity');
         activityData = resp.ok ? await resp.json() : [];
         renderActivityGrid();
         // auto refresh every 30s while on this tab
@@ -1951,7 +1951,7 @@ async function loadProverbs() {
     if (!grid) return;
     grid.innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;">იტვირთება...</p>';
     try {
-        const resp = await fetch('/api/proverbs')
+        const resp = await fetch('/api/proverbs');
         const items = resp.ok ? await resp.json() : [];
         if (!items.length) {
             grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted);"><i class="fa-solid fa-quote-left" style="font-size:3rem;opacity:0.3;display:block;margin-bottom:12px;"></i>ანდაზები ჯერ არ არის დამატებული.</div>';
@@ -1974,7 +1974,7 @@ async function loadProverbs() {
 }
 
 async function editProverb(id) {
-    const resp = await fetch('/api/proverbs')
+    const resp = await fetch('/api/proverbs');
     const items = resp.ok ? await resp.json() : [];
     const item = items.find(x => x.id === id);
     if (!item) return;
@@ -1991,7 +1991,7 @@ async function deleteProverb(id) {
         if (!resp.ok) throw new Error(await resp.text());
         showToast('წაიშალა ✓');
         loadProverbs();
-    } catch(e) { alert('შეცდომა წაშლისას: ' + e.message); }
+    } catch(e) { alert('შეცდომა: ' + e.message); }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -1999,7 +1999,7 @@ async function deleteProverb(id) {
 ═══════════════════════════════════════════════════ */
 async function loadAbout() {
     try {
-        const resp = await fetch('/api/about')
+        const resp = await fetch('/api/about');
         const data = resp.ok ? await resp.json() : {};
         const bioEl = document.getElementById('aboutBio');
         const extraEl = document.getElementById('aboutExtra');
@@ -2063,7 +2063,7 @@ async function maybeShowWelcomeModal() {
     if (isAdmin) return;
     if (localStorage.getItem('goniursa_welcome_seen') === 'yes') return;
     try {
-        const resp = await fetch('/api/about')
+        const resp = await fetch('/api/about');
         const data = resp.ok ? await resp.json() : {};
         // only show if teacher has filled in bio or photo
         if (!data.bio && !data.photoUrl) return;
@@ -2092,7 +2092,7 @@ async function loadDictionary() {
     if (!list) return;
     list.innerHTML = '<p style="color:var(--text-muted);">იტვირთება...</p>';
     try {
-        const resp = await fetch('/api/dictionary')
+        const resp = await fetch('/api/dictionary');
         const items = resp.ok ? await resp.json() : [];
         if (!items.length) { list.innerHTML = '<p style="color:var(--text-muted);">სიტყვები ჯერ არ არის.</p>'; return; }
         list.innerHTML = items.map(item => `
@@ -2117,7 +2117,7 @@ async function deleteDictWord(id) {
         if (!resp.ok) throw new Error(await resp.text());
         showToast('სიტყვა წაიშალა ✓');
         loadDictionary();
-    } catch(e) { alert('შეცდომა წაშლისას: ' + e.message); }
+    } catch(e) { alert('შეცდომა: ' + e.message); }
 }
 function filterDict() {
     const val = document.getElementById('dictSearch').value.toLowerCase();
@@ -2134,7 +2134,7 @@ async function loadPhrases() {
     if (!grid) return;
     grid.innerHTML = '<p style="color:var(--text-muted);">იტვირთება...</p>';
     try {
-        const resp = await fetch('/api/phrases')
+        const resp = await fetch('/api/phrases');
         const items = resp.ok ? await resp.json() : [];
         if (!items.length) { grid.innerHTML = '<p style="color:var(--text-muted);">ფრაზეოლოგიზმები ჯერ არ არის.</p>'; return; }
         grid.innerHTML = items.map(item => `
@@ -2166,7 +2166,7 @@ async function deletePhrase(id) {
         if (!resp.ok) throw new Error(await resp.text());
         showToast('ფრაზა წაიშალა ✓');
         loadPhrases();
-    } catch(e) { alert('შეცდომა წაშლისას: ' + e.message); }
+    } catch(e) { alert('შეცდომა: ' + e.message); }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -2177,7 +2177,7 @@ async function loadMaterials() {
     if (!grid) return;
     grid.innerHTML = '<p style="color:var(--text-muted);">იტვირთება...</p>';
     try {
-        const resp = await fetch('/api/materials')
+        const resp = await fetch('/api/materials');
         const items = resp.ok ? await resp.json() : [];
         if (!items.length) { grid.innerHTML = '<p style="color:var(--text-muted);">მასალები ჯერ არ არის.</p>'; return; }
         grid.innerHTML = items.map(item => createMaterialCardHtml(item)).join('');
@@ -2208,7 +2208,7 @@ async function deleteMaterial(id) {
         if (!resp.ok) throw new Error(await resp.text());
         showToast('მასალა წაიშალა ✓');
         loadMaterials();
-    } catch(e) { alert('შეცდომა წაშლისას: ' + e.message); }
+    } catch(e) { alert('შეცდომა: ' + e.message); }
 }
 function toggleMaterialUpload() {
     const f = document.getElementById('materialUploadForm');
@@ -2249,7 +2249,7 @@ async function loadMedia() {
     const grid = document.getElementById('mediaGrid');
     if (!grid) return;
     try {
-        const resp = await fetch('/api/materials')
+        const resp = await fetch('/api/materials');
         const items = resp.ok ? await resp.json() : [];
         const videos = items.filter(i => i.type === 'youtube');
         if (!videos.length) { grid.innerHTML = '<p style="color:var(--text-muted);">ვიდეოები ჯერ არ არის.</p>'; return; }
@@ -2270,7 +2270,7 @@ async function loadAssignmentSubmissions() {
     const grid = document.getElementById('assignmentsGrid');
     if (!grid) return;
     try {
-        const resp = await fetch('/api/assignments/submissions')
+        const resp = await fetch('/api/assignments/submissions');
         const items = resp.ok ? await resp.json() : [];
         if (!items.length) { grid.innerHTML = '<p style="color:var(--text-muted);">დავალებები ჯერ არ არის.</p>'; return; }
         grid.innerHTML = items.map(item => `
@@ -2309,7 +2309,7 @@ async function deleteAssignment(id) {
         if (!resp.ok) throw new Error(await resp.text());
         showToast('წაიშალა ✓');
         loadAssignmentSubmissions();
-    } catch(e) { alert('შეცდომა წაშლისას: ' + e.message); }
+    } catch(e) { alert('შეცდომა: ' + e.message); }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -2353,7 +2353,7 @@ async function loadEssays() {
     if (!grid) return;
     grid.innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;">იტვირთება...</p>';
     try {
-        const resp = await fetch('/api/essays')
+        const resp = await fetch('/api/essays');
         const items = resp.ok ? await resp.json() : [];
         if (!items.length) {
             grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--text-muted);">
@@ -2440,7 +2440,7 @@ async function deleteEssay(id) {
         if (!resp.ok) throw new Error(await resp.text());
         showToast('წაიშალა ✓');
         loadEssays();
-    } catch(e) { alert('შეცდომა წაშლისას: ' + e.message); }
+    } catch(e) { alert('შეცდომა: ' + e.message); }
 }
 
 
@@ -2449,7 +2449,7 @@ async function loadForum() {
     if (!thread) return;
     thread.innerHTML = '<p style="color:var(--text-muted);">იტვირთება...</p>';
     try {
-        const resp = await fetch('/api/forum/posts')
+        const resp = await fetch('/api/forum/posts');
         const posts = resp.ok ? await resp.json() : [];
         if (!posts.length) { thread.innerHTML = '<p style="color:var(--text-muted);">პოსტები ჯერ არ არის.</p>'; return; }
         thread.innerHTML = posts.slice().reverse().map(post => `
@@ -2533,7 +2533,7 @@ async function deleteQuiz(id) {
         if (!resp.ok) throw new Error(await resp.text());
         showToast('ქვიზი წაიშალა ✓');
         loadAndRenderQuizzes();
-    } catch(e) { alert('შეცდომა წაშლისას: ' + e.message); }
+    } catch(e) { alert('შეცდომა: ' + e.message); }
 }
 function startQuiz(id) {
     const q = quizData.find(x => x.id === id); if (!q) return;
@@ -2633,7 +2633,7 @@ async function markNotificationRead(id) {
     loadNotifications();
 }
 async function markAllNotificationsRead() {
-    const resp = await fetch('/api/notifications')
+    const resp = await fetch('/api/notifications');
     const items = resp.ok ? await resp.json() : [];
     await Promise.all(items.filter(x => !x.read).map(x => fetch('/api/notifications/' + x.id + '/read', { method: 'PATCH' })));
     loadNotifications();
@@ -2656,7 +2656,7 @@ async function loadEditTasks() {
     const list = document.getElementById('editTasksList');
     if (!list) return;
     try {
-        const resp = await fetch('/api/edit-tasks')
+        const resp = await fetch('/api/edit-tasks');
         const tasks = resp.ok ? await resp.json() : [];
         if (!tasks.length) { list.innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;">რედაქტირების დავალებები ჯერ არ არის.</p>'; return; }
         list.innerHTML = tasks.map(t => {
@@ -2676,7 +2676,7 @@ async function deleteEditTask(id) {
         if (!resp.ok) throw new Error(await resp.text());
         showToast('წაიშალა ✓');
         loadEditTasks();
-    } catch(e) { alert('შეცდომა წაშლისას: ' + e.message); }
+    } catch(e) { alert('შეცდომა: ' + e.message); }
 }
 async function submitEditSolution(taskId) {
     const input = document.getElementById('editAnswer_' + taskId);
@@ -2692,7 +2692,7 @@ async function loadEditSubmissions() {
     const wrap = document.getElementById('editSubmissionsList');
     if (!wrap || !isAdmin) return;
     try {
-        const [sResp, tResp] = await Promise.all([fetch('/api/edit-submissions', fetch('/api/edit-tasks']);
+        const [sResp, tResp] = await Promise.all([fetch('/api/edit-submissions'), fetch('/api/edit-tasks')]);
         const submissions = sResp.ok ? await sResp.json() : [];
         const tasks = tResp.ok ? await tResp.json() : [];
         const map = {}; tasks.forEach(t => map[t.id] = t);
@@ -2719,7 +2719,7 @@ async function loadPendingUsers() {
     const navBadge = document.getElementById('pendingNavBadge');
     if (!el) return;
     try {
-        const resp = await fetch('/api/users/pending')
+        const resp = await fetch('/api/users/pending');
         const users = resp.ok ? await resp.json() : [];
         // update all badges
         [badge, navBadge].forEach(b => {
@@ -2780,7 +2780,7 @@ async function loadAllUsers() {
     const el = document.getElementById('allUsersList');
     if (!el) return;
     try {
-        const resp = await fetch('/api/users/all')
+        const resp = await fetch('/api/users/all');
         const users = resp.ok ? await resp.json() : [];
         if (!users.length) { el.innerHTML = '<p style="color:var(--text-muted);">მომხმარებლები არ არის.</p>'; return; }
         const statusColor = { approved:'#22c55e', pending:'#f59e0b', rejected:'#ef4444' };
@@ -2844,19 +2844,17 @@ async function rejectUser(id) {
 
 async function deleteUserAccount(id, username) {
     if (!confirm('სრულად წავშალო ანგარიში ' + (username||'') + '?')) return;
-    try {
-        if (username) {
-            await fetch('/api/users/by-username/' + encodeURIComponent(username), { method: 'DELETE' });
-            await fetch('/api/students/' + encodeURIComponent(username), { method: 'DELETE' }).catch(()=>{});
-        } else {
-            const resp = await fetch('/api/users/' + id, { method: 'DELETE' });
-            if (!resp.ok) throw new Error(await resp.text());
-        }
-        showToast('ანგარიში წაიშალა ✓');
-        loadAllUsers();
-        loadPendingUsers();
-        refreshTeacherJournal();
-    } catch(e) { alert('შეცდომა წაშლისას: ' + e.message); }
+    // delete by username — most reliable
+    if (username) {
+        await fetch('/api/users/by-username/' + encodeURIComponent(username), { method: 'DELETE' });
+        await fetch('/api/students/' + encodeURIComponent(username), { method: 'DELETE' });
+    } else {
+        await fetch('/api/users/' + id, { method: 'DELETE' });
+    }
+    showToast('ანგარიში წაიშალა ✓');
+    loadAllUsers();
+    loadPendingUsers();
+    refreshTeacherJournal();
 }
 
 
@@ -2864,7 +2862,7 @@ async function loadTeacherAssignments() {
     const container = document.getElementById('teacherAssignments');
     if (!container) return;
     try {
-        const resp = await fetch('/api/assignments/submissions')
+        const resp = await fetch('/api/assignments/submissions');
         window._allAssignments = resp.ok ? await resp.json() : [];
         filterTeacherAssignments();
     } catch (e) {}
@@ -2882,8 +2880,8 @@ async function refreshTeacherJournal() {
     if (!container) return;
     try {
         const [aResp, qResp, gResp, sgResp, stResp] = await Promise.all([
-            fetch('/api/assignments/submissions', fetch('/api/quiz-attempts'),
-            fetch('/api/grades', fetch('/api/student-groups', fetch('/api/students')
+            fetch('/api/assignments/submissions'), fetch('/api/quiz-attempts'),
+            fetch('/api/grades'), fetch('/api/student-groups'), fetch('/api/students')
         ]);
         const assignments = aResp.ok ? await aResp.json() : [];
         const attempts = qResp.ok ? await qResp.json() : [];
@@ -2938,22 +2936,25 @@ async function addStudentManual() {
 }
 async function deleteStudentManual(name) {
     if (!confirm('წავშალო ' + name + '?')) return;
-    try {
-        await fetch('/api/students/' + encodeURIComponent(name), { method: 'DELETE' });
-        await fetch('/api/users/by-username/' + encodeURIComponent(name), { method: 'DELETE' }).catch(()=>{});
-        await fetch('/api/grades/by-user/' + encodeURIComponent(name), { method: 'DELETE' }).catch(()=>{});
-        await fetch('/api/assignments/by-author/' + encodeURIComponent(name), { method: 'DELETE' }).catch(()=>{});
-        showToast(name + ' სრულად წაიშალა ✓');
-        refreshTeacherJournal();
-        loadAllUsers();
-        loadPendingUsers();
-    } catch(e) { alert('შეცდომა წაშლისას: ' + e.message); }
+    const client_name = name;
+    // 1. students collection
+    await fetch('/api/students/' + encodeURIComponent(client_name), { method: 'DELETE' });
+    // 2. users collection (by username)
+    await fetch('/api/users/by-username/' + encodeURIComponent(client_name), { method: 'DELETE' }).catch(()=>{});
+    // 3. grades
+    await fetch('/api/grades/by-user/' + encodeURIComponent(client_name), { method: 'DELETE' }).catch(()=>{});
+    // 4. assignments — delete all submissions by this user
+    await fetch('/api/assignments/by-author/' + encodeURIComponent(client_name), { method: 'DELETE' }).catch(()=>{});
+    showToast(client_name + ' სრულად წაიშალა ✓');
+    refreshTeacherJournal();
+    loadAllUsers();
+    loadPendingUsers();
 }
 async function loadManualJournal() {
     const el = document.getElementById('manualJournalTable');
     if (!el) return;
     try {
-        const resp = await fetch('/api/manual-journal')
+        const resp = await fetch('/api/manual-journal');
         const rows = resp.ok ? await resp.json() : [];
         if (!rows.length) { el.innerHTML = '<p style="color:var(--text-muted);">ჩანაწერები ჯერ არ არის.</p>'; return; }
         el.innerHTML = `<div style="overflow:auto;"><table style="width:100%;border-collapse:collapse;"><thead><tr>${['მოსწ.','ჯგ.','დავ.','ქვ.','%','ქ.','კომ.',''].map(h=>`<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">${h}</th>`).join('')}</tr></thead><tbody>${
@@ -2983,7 +2984,7 @@ async function deleteManualJournalRow(id) {
         if (!resp.ok) throw new Error(await resp.text());
         showToast('წაიშალა ✓');
         loadManualJournal();
-    } catch(e) { alert('შეცდომა წაშლისას: ' + e.message); }
+    } catch(e) { alert('შეცდომა: ' + e.message); }
 }
 
 /* ═══════════════════════════════════════════════════
