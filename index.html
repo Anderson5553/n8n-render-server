@@ -825,6 +825,7 @@
         <div class="nav-group">
             <button class="nav-group-btn" onclick="toggleDropdown(this)"><i class="fa-solid fa-pencil"></i> დავალება <i class="fa-solid fa-chevron-down chevron"></i></button>
             <div class="nav-dropdown">
+                <button onclick="closeDropdowns();switchTab('lessonPackages')"><i class="fa-solid fa-book-open"></i> თემის პაკეტები</button>
                 <button onclick="closeDropdowns();switchTab('assignments')"><i class="fa-solid fa-file-arrow-up"></i> დავალებები</button>
                 <button onclick="closeDropdowns();switchTab('essays')"><i class="fa-solid fa-award"></i> მაღალქულიანი ესეები</button>
                 <button onclick="closeDropdowns();switchTab('editTasks')"><i class="fa-solid fa-highlighter"></i> რედაქტირება</button>
@@ -1540,6 +1541,7 @@ function switchTab(tabId) {
         profile: renderProfileStats,
         media: loadMedia,
         about: loadAbout,
+        lessonPackages: loadLessonPackages,
         studentActivity: () => { loadStudentActivity(); },
         teacherPanel: () => { loadPendingUsers(); loadAllUsers(); loadTeacherAssignments(); refreshTeacherJournal(); loadManualJournal(); },
         editTasks: () => { loadEditTasks(); if (isAdmin) loadEditSubmissions(); },
@@ -3587,6 +3589,260 @@ window.onload = async function() {
     // warm search cache in background
     setTimeout(() => buildSearchCache().catch(() => {}), 2000);
 };
+</script>
+<!-- ═══ LESSON PACKAGES SECTION ═══ -->
+<section id="lessonPackages">
+  <div class="section-header">
+    <h2><i class="fa-solid fa-book-open" style="color:var(--accent);margin-right:8px;"></i>თემის პაკეტები</h2>
+  </div>
+
+  <!-- Teacher controls -->
+  <div id="lpTeacherControls" style="display:none;margin-bottom:20px;">
+    <button class="btn" onclick="toggleLPForm()" style="background:var(--accent);color:#000;font-weight:600;">
+      <i class="fa-solid fa-plus"></i> ახალი პაკეტი
+    </button>
+    <div id="lpCreateForm" style="display:none;background:var(--card);border-radius:12px;padding:20px;margin-top:16px;max-width:500px;">
+      <h3 style="margin-bottom:12px;">ახალი თემის პაკეტი</h3>
+      <input id="lpTitle" type="text" placeholder="სათაური (მაგ. იგი — ვეფხისტყაოსანი)" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);margin-bottom:10px;">
+      <input id="lpSubject" type="text" placeholder="საგანი (მაგ. ქართული ლიტერატურა)" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);margin-bottom:10px;">
+      <textarea id="lpDesc" placeholder="მოკლე აღწერა" rows="2" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);margin-bottom:10px;resize:vertical;"></textarea>
+      <div style="display:flex;gap:10px;">
+        <button class="btn" onclick="createLessonPackage()" style="background:var(--accent);color:#000;font-weight:600;">შექმნა</button>
+        <button class="btn" onclick="toggleLPForm()" style="background:var(--card-hover);">გაუქმება</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Package list / detail view -->
+  <div id="lpList"></div>
+  <div id="lpDetail" style="display:none;"></div>
+</section>
+
+<script>
+// ─── LESSON PACKAGES ─────────────────────────────────────────────────────────
+let lpPackages = [];
+let lpCurrentId = null;
+
+async function loadLessonPackages() {
+  const role = isAdmin ? 'teacher' : 'student';
+  try {
+    const resp = await fetch('/api/lesson-packages?role=' + role);
+    lpPackages = resp.ok ? await resp.json() : [];
+  } catch(e) { lpPackages = []; }
+  renderLPList();
+}
+
+function renderLPList() {
+  const el = document.getElementById('lpList');
+  const detail = document.getElementById('lpDetail');
+  detail.style.display = 'none';
+  el.style.display = '';
+  document.getElementById('lpTeacherControls').style.display = isAdmin ? 'block' : 'none';
+
+  if (!lpPackages.length) {
+    el.innerHTML = '<p style="color:var(--text-muted);">პაკეტები ჯერ არ არის.</p>';
+    return;
+  }
+
+  el.innerHTML = lpPackages.map(pkg => `
+    <div style="background:var(--card);border-radius:14px;padding:20px;margin-bottom:16px;cursor:pointer;transition:box-shadow 0.2s;" onclick="openLPDetail(${pkg.id})" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,0.2)'" onmouseout="this.style.boxShadow='none'">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;">
+        <div>
+          <h3 style="margin:0 0 6px;font-size:1.15rem;">${escapeHtml(pkg.title)}</h3>
+          ${pkg.subject ? `<span style="font-size:0.8rem;background:rgba(250,204,21,0.15);color:var(--accent);padding:2px 10px;border-radius:999px;">${escapeHtml(pkg.subject)}</span>` : ''}
+          ${pkg.description ? `<p style="color:var(--text-muted);margin:8px 0 0;font-size:0.9rem;">${escapeHtml(pkg.description)}</p>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+          <span style="font-size:0.8rem;color:var(--text-muted);">${(pkg.items||[]).length} მასალა</span>
+          ${isAdmin ? `
+            <span style="font-size:0.75rem;padding:3px 10px;border-radius:999px;background:${pkg.published ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'};color:${pkg.published ? '#22c55e' : '#ef4444'};">
+              ${pkg.published ? 'გამოქვეყნებული' : 'დამალული'}
+            </span>
+            <button onclick="event.stopPropagation();toggleLPPublish(${pkg.id})" style="font-size:0.78rem;padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;">
+              ${pkg.published ? 'დამალვა' : 'გამოქვეყნება'}
+            </button>
+            <button onclick="event.stopPropagation();deleteLessonPackage(${pkg.id})" style="font-size:0.78rem;padding:4px 10px;border-radius:8px;border:none;background:rgba(239,68,68,0.15);color:#ef4444;cursor:pointer;">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openLPDetail(id) {
+  lpCurrentId = id;
+  const pkg = lpPackages.find(p => p.id === id);
+  if (!pkg) return;
+  document.getElementById('lpList').style.display = 'none';
+  const detail = document.getElementById('lpDetail');
+  detail.style.display = 'block';
+
+  const itemsHtml = (pkg.items || []).length ? pkg.items.map(item => renderLPItem(item, pkg.id)).join('') : '<p style="color:var(--text-muted);">მასალები ჯერ არ არის.</p>';
+
+  detail.innerHTML = `
+    <button onclick="loadLessonPackages()" style="margin-bottom:20px;background:transparent;border:1px solid var(--border);color:var(--text);padding:8px 16px;border-radius:8px;cursor:pointer;">
+      <i class="fa-solid fa-arrow-left"></i> უკან
+    </button>
+    <h2 style="margin-bottom:6px;">${escapeHtml(pkg.title)}</h2>
+    ${pkg.subject ? `<span style="font-size:0.85rem;background:rgba(250,204,21,0.15);color:var(--accent);padding:3px 12px;border-radius:999px;">${escapeHtml(pkg.subject)}</span>` : ''}
+    ${pkg.description ? `<p style="color:var(--text-muted);margin:12px 0;">${escapeHtml(pkg.description)}</p>` : ''}
+    
+    ${isAdmin ? `
+    <div style="background:var(--card);border-radius:12px;padding:20px;margin:20px 0;">
+      <h3 style="margin-bottom:14px;">მასალის დამატება</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+        <select id="lpItemType" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);" onchange="showLPItemFields()">
+          <option value="text">📝 ტექსტი</option>
+          <option value="video">🎬 YouTube ვიდეო</option>
+          <option value="file">📎 ფაილი/PDF</option>
+        </select>
+        <input id="lpItemTitle" type="text" placeholder="სათაური" style="flex:1;min-width:180px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+      </div>
+      <div id="lpItemTextArea" style="margin-bottom:10px;">
+        <textarea id="lpItemContent" placeholder="ტექსტი / მოთხრობა..." rows="5" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);resize:vertical;"></textarea>
+      </div>
+      <div id="lpItemVideoArea" style="display:none;margin-bottom:10px;">
+        <input id="lpItemUrl" type="text" placeholder="YouTube URL" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+      </div>
+      <div id="lpItemFileArea" style="display:none;margin-bottom:10px;">
+        <input id="lpItemFile" type="file" style="width:100%;padding:8px;">
+      </div>
+      <button onclick="addLPItem(${pkg.id})" style="background:var(--accent);color:#000;font-weight:600;padding:8px 20px;border-radius:8px;border:none;cursor:pointer;">
+        <i class="fa-solid fa-plus"></i> დამატება
+      </button>
+    </div>
+    ` : ''}
+
+    <div id="lpItemsList">${itemsHtml}</div>
+  `;
+}
+
+function showLPItemFields() {
+  const type = document.getElementById('lpItemType').value;
+  document.getElementById('lpItemTextArea').style.display = type === 'text' ? 'block' : 'none';
+  document.getElementById('lpItemVideoArea').style.display = type === 'video' ? 'block' : 'none';
+  document.getElementById('lpItemFileArea').style.display = type === 'file' ? 'block' : 'none';
+}
+
+function renderLPItem(item, pkgId) {
+  let content = '';
+  if (item.type === 'text') {
+    content = `<div style="background:var(--bg);border-radius:8px;padding:14px;margin-top:10px;white-space:pre-wrap;line-height:1.7;">${escapeHtml(item.content || '')}</div>`;
+  } else if (item.type === 'video') {
+    const videoId = extractYouTubeId(item.url || '');
+    content = videoId ? `<div style="margin-top:10px;border-radius:10px;overflow:hidden;"><iframe width="100%" height="315" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe></div>` : `<a href="${escapeHtml(item.url)}" target="_blank" style="color:var(--accent);">${escapeHtml(item.url)}</a>`;
+  } else if (item.type === 'file') {
+    content = `<a href="${escapeHtml(item.fileUrl)}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;margin-top:10px;padding:10px 16px;background:rgba(250,204,21,0.1);border-radius:8px;color:var(--accent);text-decoration:none;"><i class="fa-solid fa-file-arrow-down"></i>${escapeHtml(item.originalName || 'ფაილი')}</a>`;
+  }
+
+  const icon = {text:'📝', video:'🎬', file:'📎', quiz:'❓', assignment:'📋'}[item.type] || '📄';
+
+  return `
+    <div style="background:var(--card);border-radius:10px;padding:16px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <span style="font-weight:600;">${icon} ${escapeHtml(item.title)}</span>
+        ${isAdmin ? `<button onclick="deleteLPItem(${pkgId}, ${item.id})" style="background:rgba(239,68,68,0.15);color:#ef4444;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;"><i class="fa-solid fa-trash"></i></button>` : ''}
+      </div>
+      ${content}
+    </div>
+  `;
+}
+
+function extractYouTubeId(url) {
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+  return m ? m[1] : null;
+}
+
+function toggleLPForm() {
+  const f = document.getElementById('lpCreateForm');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+async function createLessonPackage() {
+  const title = document.getElementById('lpTitle').value.trim();
+  const subject = document.getElementById('lpSubject').value.trim();
+  const description = document.getElementById('lpDesc').value.trim();
+  if (!title) { alert('სათაური სავალდებულოა'); return; }
+  try {
+    const resp = await fetch('/api/lesson-packages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({title, subject, description})
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    showToast('პაკეტი შეიქმნა ✓');
+    document.getElementById('lpTitle').value = '';
+    document.getElementById('lpSubject').value = '';
+    document.getElementById('lpDesc').value = '';
+    toggleLPForm();
+    loadLessonPackages();
+  } catch(e) { alert('შეცდომა: ' + e.message); }
+}
+
+async function addLPItem(pkgId) {
+  const type = document.getElementById('lpItemType').value;
+  const title = document.getElementById('lpItemTitle').value.trim();
+  if (!title) { alert('სათაური სავალდებულოა'); return; }
+
+  const formData = new FormData();
+  formData.append('type', type);
+  formData.append('title', title);
+
+  if (type === 'text') {
+    formData.append('content', document.getElementById('lpItemContent').value);
+  } else if (type === 'video') {
+    formData.append('url', document.getElementById('lpItemUrl').value.trim());
+  } else if (type === 'file') {
+    const fileInput = document.getElementById('lpItemFile');
+    if (!fileInput.files[0]) { alert('ფაილი სავალდებულოა'); return; }
+    formData.append('file', fileInput.files[0]);
+  }
+
+  try {
+    const resp = await fetch('/api/lesson-packages/' + pkgId + '/items', {
+      method: 'POST', body: formData
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    showToast('მასალა დაემატა ✓');
+    document.getElementById('lpItemTitle').value = '';
+    document.getElementById('lpItemContent').value = '';
+    document.getElementById('lpItemUrl').value = '';
+    document.getElementById('lpItemFile').value = '';
+    await loadLessonPackages();
+    openLPDetail(pkgId);
+  } catch(e) { alert('შეცდომა: ' + e.message); }
+}
+
+async function toggleLPPublish(id) {
+  try {
+    const resp = await fetch('/api/lesson-packages/' + id + '/publish', { method: 'PATCH' });
+    if (!resp.ok) throw new Error(await resp.text());
+    const data = await resp.json();
+    showToast(data.published ? 'გამოქვეყნდა ✓' : 'დაიმალა ✓');
+    loadLessonPackages();
+  } catch(e) { alert('შეცდომა: ' + e.message); }
+}
+
+async function deleteLessonPackage(id) {
+  try {
+    const resp = await fetch('/api/lesson-packages/' + id, { method: 'DELETE' });
+    if (!resp.ok) throw new Error(await resp.text());
+    showToast('წაიშალა ✓');
+    loadLessonPackages();
+  } catch(e) { alert('შეცდომა: ' + e.message); }
+}
+
+async function deleteLPItem(pkgId, itemId) {
+  try {
+    const resp = await fetch('/api/lesson-packages/' + pkgId + '/items/' + itemId, { method: 'DELETE' });
+    if (!resp.ok) throw new Error(await resp.text());
+    showToast('წაიშალა ✓');
+    await loadLessonPackages();
+    openLPDetail(pkgId);
+  } catch(e) { alert('შეცდომა: ' + e.message); }
+}
 </script>
 </body>
 </html>
