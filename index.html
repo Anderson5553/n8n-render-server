@@ -1986,9 +1986,12 @@ async function editProverb(id) {
 
 async function deleteProverb(id) {
     if (!confirm('წავშალო?')) return;
-    await fetch('/api/proverbs/' + id, { method: 'DELETE' });
-    showToast('წაიშალა ✓');
-    loadProverbs();
+    try {
+        const resp = await fetch('/api/proverbs/' + id, { method: 'DELETE' });
+        if (!resp.ok) throw new Error(await resp.text());
+        showToast('წაიშალა ✓');
+        loadProverbs();
+    } catch(e) { alert('შეცდომა წაშლისას: ' + e.message); }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -2109,8 +2112,12 @@ async function addDictWord() {
 }
 async function deleteDictWord(id) {
     if (!confirm('წავშალო?')) return;
-    await fetch('/api/dictionary/' + id, { method: 'DELETE' });
-    showToast('სიტყვა წაიშალა ✓'); loadDictionary();
+    try {
+        const resp = await fetch('/api/dictionary/' + id, { method: 'DELETE' });
+        if (!resp.ok) throw new Error(await resp.text());
+        showToast('სიტყვა წაიშალა ✓');
+        loadDictionary();
+    } catch(e) { alert('შეცდომა წაშლისას: ' + e.message); }
 }
 function filterDict() {
     const val = document.getElementById('dictSearch').value.toLowerCase();
@@ -2154,8 +2161,12 @@ async function addPhrase() {
 }
 async function deletePhrase(id) {
     if (!confirm('წავშალო?')) return;
-    await fetch('/api/phrases/' + id, { method: 'DELETE' });
-    showToast('ფრაზა წაიშალა ✓'); loadPhrases();
+    try {
+        const resp = await fetch('/api/phrases/' + id, { method: 'DELETE' });
+        if (!resp.ok) throw new Error(await resp.text());
+        showToast('ფრაზა წაიშალა ✓');
+        loadPhrases();
+    } catch(e) { alert('შეცდომა წაშლისას: ' + e.message); }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -2192,8 +2203,12 @@ function createMaterialCardHtml(item) {
 }
 async function deleteMaterial(id) {
     if (!confirm('წავშალო?')) return;
-    await fetch('/api/materials/' + id, { method: 'DELETE' });
-    showToast('მასალა წაიშალა ✓'); loadMaterials();
+    try {
+        const resp = await fetch('/api/materials/' + id, { method: 'DELETE' });
+        if (!resp.ok) throw new Error(await resp.text());
+        showToast('მასალა წაიშალა ✓');
+        loadMaterials();
+    } catch(e) { alert('შეცდომა წაშლისას: ' + e.message); }
 }
 function toggleMaterialUpload() {
     const f = document.getElementById('materialUploadForm');
@@ -2289,8 +2304,12 @@ async function submitAssignment() {
 }
 async function deleteAssignment(id) {
     if (!confirm('წავშალო?')) return;
-    await fetch('/api/assignments/submissions/' + id, { method: 'DELETE' });
-    showToast('წაიშალა ✓'); loadAssignmentSubmissions();
+    try {
+        const resp = await fetch('/api/assignments/submissions/' + id, { method: 'DELETE' });
+        if (!resp.ok) throw new Error(await resp.text());
+        showToast('წაიშალა ✓');
+        loadAssignmentSubmissions();
+    } catch(e) { alert('შეცდომა წაშლისას: ' + e.message); }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -2416,9 +2435,12 @@ function closeEssayView() {
 
 async function deleteEssay(id) {
     if (!confirm('წავშალო?')) return;
-    await fetch('/api/essays/' + id, { method: 'DELETE' });
-    showToast('წაიშალა ✓');
-    loadEssays();
+    try {
+        const resp = await fetch('/api/essays/' + id, { method: 'DELETE' });
+        if (!resp.ok) throw new Error(await resp.text());
+        showToast('წაიშალა ✓');
+        loadEssays();
+    } catch(e) { alert('შეცდომა წაშლისას: ' + e.message); }
 }
 
 
@@ -2506,8 +2528,12 @@ async function saveQuiz() {
 }
 async function deleteQuiz(id) {
     if (!confirm('წავშალო?')) return;
-    await fetch('/api/quizzes/' + id, { method: 'DELETE' });
-    showToast('ქვიზი წაიშალა ✓'); loadAndRenderQuizzes();
+    try {
+        const resp = await fetch('/api/quizzes/' + id, { method: 'DELETE' });
+        if (!resp.ok) throw new Error(await resp.text());
+        showToast('ქვიზი წაიშალა ✓');
+        loadAndRenderQuizzes();
+    } catch(e) { alert('შეცდომა წაშლისას: ' + e.message); }
 }
 function startQuiz(id) {
     const q = quizData.find(x => x.id === id); if (!q) return;
@@ -2645,8 +2671,12 @@ async function loadEditTasks() {
 }
 async function deleteEditTask(id) {
     if (!confirm('წავშალო?')) return;
-    await fetch('/api/edit-tasks/' + id, { method: 'DELETE' });
-    showToast('წაიშალა ✓'); loadEditTasks();
+    try {
+        const resp = await fetch('/api/edit-tasks/' + id, { method: 'DELETE' });
+        if (!resp.ok) throw new Error(await resp.text());
+        showToast('წაიშალა ✓');
+        loadEditTasks();
+    } catch(e) { alert('შეცდომა წაშლისას: ' + e.message); }
 }
 async function submitEditSolution(taskId) {
     const input = document.getElementById('editAnswer_' + taskId);
@@ -2814,17 +2844,19 @@ async function rejectUser(id) {
 
 async function deleteUserAccount(id, username) {
     if (!confirm('სრულად წავშალო ანგარიში ' + (username||'') + '?')) return;
-    // delete by username — most reliable
-    if (username) {
-        await fetch('/api/users/by-username/' + encodeURIComponent(username), { method: 'DELETE' });
-        await fetch('/api/students/' + encodeURIComponent(username), { method: 'DELETE' });
-    } else {
-        await fetch('/api/users/' + id, { method: 'DELETE' });
-    }
-    showToast('ანგარიში წაიშალა ✓');
-    loadAllUsers();
-    loadPendingUsers();
-    refreshTeacherJournal();
+    try {
+        if (username) {
+            await fetch('/api/users/by-username/' + encodeURIComponent(username), { method: 'DELETE' });
+            await fetch('/api/students/' + encodeURIComponent(username), { method: 'DELETE' }).catch(()=>{});
+        } else {
+            const resp = await fetch('/api/users/' + id, { method: 'DELETE' });
+            if (!resp.ok) throw new Error(await resp.text());
+        }
+        showToast('ანგარიში წაიშალა ✓');
+        loadAllUsers();
+        loadPendingUsers();
+        refreshTeacherJournal();
+    } catch(e) { alert('შეცდომა წაშლისას: ' + e.message); }
 }
 
 
@@ -2906,19 +2938,16 @@ async function addStudentManual() {
 }
 async function deleteStudentManual(name) {
     if (!confirm('წავშალო ' + name + '?')) return;
-    const client_name = name;
-    // 1. students collection
-    await fetch('/api/students/' + encodeURIComponent(client_name), { method: 'DELETE' });
-    // 2. users collection (by username)
-    await fetch('/api/users/by-username/' + encodeURIComponent(client_name), { method: 'DELETE' }).catch(()=>{});
-    // 3. grades
-    await fetch('/api/grades/by-user/' + encodeURIComponent(client_name), { method: 'DELETE' }).catch(()=>{});
-    // 4. assignments — delete all submissions by this user
-    await fetch('/api/assignments/by-author/' + encodeURIComponent(client_name), { method: 'DELETE' }).catch(()=>{});
-    showToast(client_name + ' სრულად წაიშალა ✓');
-    refreshTeacherJournal();
-    loadAllUsers();
-    loadPendingUsers();
+    try {
+        await fetch('/api/students/' + encodeURIComponent(name), { method: 'DELETE' });
+        await fetch('/api/users/by-username/' + encodeURIComponent(name), { method: 'DELETE' }).catch(()=>{});
+        await fetch('/api/grades/by-user/' + encodeURIComponent(name), { method: 'DELETE' }).catch(()=>{});
+        await fetch('/api/assignments/by-author/' + encodeURIComponent(name), { method: 'DELETE' }).catch(()=>{});
+        showToast(name + ' სრულად წაიშალა ✓');
+        refreshTeacherJournal();
+        loadAllUsers();
+        loadPendingUsers();
+    } catch(e) { alert('შეცდომა წაშლისას: ' + e.message); }
 }
 async function loadManualJournal() {
     const el = document.getElementById('manualJournalTable');
@@ -2949,8 +2978,12 @@ async function addManualJournalRow() {
 }
 async function deleteManualJournalRow(id) {
     if (!confirm('წავშალო?')) return;
-    await fetch('/api/manual-journal/' + id, { method: 'DELETE' });
-    showToast('წაიშალა ✓'); loadManualJournal();
+    try {
+        const resp = await fetch('/api/manual-journal/' + id, { method: 'DELETE' });
+        if (!resp.ok) throw new Error(await resp.text());
+        showToast('წაიშალა ✓');
+        loadManualJournal();
+    } catch(e) { alert('შეცდომა წაშლისას: ' + e.message); }
 }
 
 /* ═══════════════════════════════════════════════════
