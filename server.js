@@ -85,6 +85,8 @@ process.on('unhandledRejection', (reason, promise) => {
     await ensureCollection('studentActivity');
     await ensureCollection('studentProgress');
     await ensureCollection('essays');
+    await ensureCollection('erovnuliTopics');
+    await ensureCollection('erovnuliItems');
   } catch (e) {
     console.error('Collection init error:', e);
   }
@@ -1333,6 +1335,160 @@ app.delete('/api/text-materials/:id', async (req, res) => {
   }
 });
 
+// ─── EROVNULI TOPICS ──────────────────────────────────────────────────────────
+// Topic = { id, title, description, createdAt }
+// TopicItem = { id, topicId, type: 'text'|'quiz'|'video'|'file', title, content/url/fileUrl, quizId, createdAt }
+
+app.get('/api/erovnuli/topics', async (req, res) => {
+  try {
+    res.json(await readCollection('erovnuliTopics'));
+  } catch(e) {
+    console.error('Erovnuli topics get error:', e);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+app.post('/api/erovnuli/topics', async (req, res) => {
+  try {
+    const { title, description } = req.body || {};
+    if (!title) return res.status(400).json({ error: 'title required' });
+    const items = await readCollection('erovnuliTopics');
+    const newId = await nextIdFor('erovnuliTopics');
+    const item = { id: newId, title, description: description || '', createdAt: new Date().toISOString() };
+    items.push(item);
+    await writeCollection('erovnuliTopics', items);
+    res.status(201).json(item);
+  } catch(e) {
+    console.error('Erovnuli topics post error:', e);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+app.put('/api/erovnuli/topics/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const items = await readCollection('erovnuliTopics');
+    const idx = items.findIndex(x => x.id === id);
+    if (idx === -1) return res.status(404).json({ error: 'not found' });
+    items[idx] = { ...items[idx], ...req.body, id };
+    await writeCollection('erovnuliTopics', items);
+    res.json({ ok: true });
+  } catch(e) {
+    console.error('Erovnuli topics put error:', e);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+app.delete('/api/erovnuli/topics/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await deleteItem('erovnuliTopics', id);
+    // also delete all items in this topic
+    const allItems = await readCollection('erovnuliItems');
+    const remaining = allItems.filter(x => x.topicId !== id);
+    await writeCollection('erovnuliItems', remaining);
+    res.json({ ok: true });
+  } catch(e) {
+    console.error('Erovnuli topics delete error:', e);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+// Topic Items
+app.get('/api/erovnuli/items', async (req, res) => {
+  try {
+    const { topicId } = req.query;
+    const items = await readCollection('erovnuliItems');
+    res.json(topicId ? items.filter(x => x.topicId === parseInt(topicId)) : items);
+  } catch(e) {
+    console.error('Erovnuli items get error:', e);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+app.post('/api/erovnuli/items/text', async (req, res) => {
+  try {
+    const { topicId, title, content } = req.body || {};
+    if (!topicId || !title || !content) return res.status(400).json({ error: 'topicId, title and content required' });
+    const items = await readCollection('erovnuliItems');
+    const newId = await nextIdFor('erovnuliItems');
+    const item = { id: newId, topicId: parseInt(topicId), type: 'text', title, content, createdAt: new Date().toISOString() };
+    items.push(item);
+    await writeCollection('erovnuliItems', items);
+    res.status(201).json(item);
+  } catch(e) {
+    console.error('Erovnuli text post error:', e);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+app.post('/api/erovnuli/items/video', async (req, res) => {
+  try {
+    const { topicId, title, url } = req.body || {};
+    if (!topicId || !title || !url) return res.status(400).json({ error: 'topicId, title and url required' });
+    const items = await readCollection('erovnuliItems');
+    const newId = await nextIdFor('erovnuliItems');
+    const item = { id: newId, topicId: parseInt(topicId), type: 'video', title, url, createdAt: new Date().toISOString() };
+    items.push(item);
+    await writeCollection('erovnuliItems', items);
+    res.status(201).json(item);
+  } catch(e) {
+    console.error('Erovnuli video post error:', e);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+app.post('/api/erovnuli/items/quiz', async (req, res) => {
+  try {
+    const { topicId, title, quizId } = req.body || {};
+    if (!topicId || !title || !quizId) return res.status(400).json({ error: 'topicId, title and quizId required' });
+    const items = await readCollection('erovnuliItems');
+    const newId = await nextIdFor('erovnuliItems');
+    const item = { id: newId, topicId: parseInt(topicId), type: 'quiz', title, quizId: parseInt(quizId), createdAt: new Date().toISOString() };
+    items.push(item);
+    await writeCollection('erovnuliItems', items);
+    res.status(201).json(item);
+  } catch(e) {
+    console.error('Erovnuli quiz post error:', e);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+app.post('/api/erovnuli/items/file', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'file required' });
+    const { topicId, title } = req.body || {};
+    if (!topicId || !title) return res.status(400).json({ error: 'topicId and title required' });
+    const safeName = Date.now() + '-' + req.file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_');
+    const filePath = 'erovnuli/' + safeName;
+    const { error: uploadError } = await supabase.storage
+      .from('uploads')
+      .upload(filePath, req.file.buffer, { contentType: req.file.mimetype });
+    if (uploadError) throw uploadError;
+    const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(filePath);
+    const items = await readCollection('erovnuliItems');
+    const newId = await nextIdFor('erovnuliItems');
+    const item = { id: newId, topicId: parseInt(topicId), type: 'file', title, fileUrl: publicUrl, originalName: req.file.originalname, mimeType: req.file.mimetype, createdAt: new Date().toISOString() };
+    items.push(item);
+    await writeCollection('erovnuliItems', items);
+    res.status(201).json(item);
+  } catch(e) {
+    console.error('Erovnuli file post error:', e);
+    res.status(500).json({ error: 'upload failed' });
+  }
+});
+
+app.delete('/api/erovnuli/items/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await deleteItem('erovnuliItems', id);
+    res.json({ ok: true });
+  } catch(e) {
+    console.error('Erovnuli items delete error:', e);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
 // ─── GLOBAL ERROR HANDLER ────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error('Unhandled route error:', err);
@@ -1415,6 +1571,143 @@ io.on('connection', (socket) => {
     onlineUsers.delete(socket.id);
     io.emit('users-online', [...onlineUsers.values()]);
   });
+});
+
+// ─── LESSON PACKAGES (თემის პაკეტები) ────────────────────────────────────────
+(async () => { try { await ensureCollection('lessonPackages'); } catch(e) {} })();
+
+// Get all packages (students see published, teacher sees all)
+app.get('/api/lesson-packages', async (req, res) => {
+  try {
+    const packages = await readCollection('lessonPackages');
+    const role = req.query.role || 'student';
+    if (role === 'teacher') {
+      res.json(packages);
+    } else {
+      res.json(packages.filter(p => p.published));
+    }
+  } catch(e) {
+    console.error('Lesson packages get error:', e);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+// Get single package
+app.get('/api/lesson-packages/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const packages = await readCollection('lessonPackages');
+    const pkg = packages.find(p => p.id === id);
+    if (!pkg) return res.status(404).json({ error: 'not found' });
+    res.json(pkg);
+  } catch(e) {
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+// Create new package
+app.post('/api/lesson-packages', async (req, res) => {
+  try {
+    const { title, description, subject } = req.body || {};
+    if (!title) return res.status(400).json({ error: 'title required' });
+    const packages = await readCollection('lessonPackages');
+    const newId = await nextIdFor('lessonPackages');
+    const pkg = {
+      id: newId, title, description: description || '',
+      subject: subject || '', published: false,
+      items: [], createdAt: new Date().toISOString()
+    };
+    packages.push(pkg);
+    await writeCollection('lessonPackages', packages);
+    res.status(201).json(pkg);
+  } catch(e) {
+    console.error('Lesson packages post error:', e);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+// Add item to package (text, video, quiz, file, assignment)
+app.post('/api/lesson-packages/:id/items', upload.single('file'), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const packages = await readCollection('lessonPackages');
+    const idx = packages.findIndex(p => p.id === id);
+    if (idx === -1) return res.status(404).json({ error: 'not found' });
+
+    const { type, title, content, url, quizId } = req.body || {};
+    if (!type || !title) return res.status(400).json({ error: 'type and title required' });
+
+    const itemId = Date.now();
+    let item = { id: itemId, type, title, createdAt: new Date().toISOString() };
+
+    if (type === 'text') {
+      item.content = content || '';
+    } else if (type === 'video') {
+      item.url = url || '';
+    } else if (type === 'quiz') {
+      item.quizId = parseInt(quizId);
+    } else if (type === 'file' && req.file) {
+      const safeName = Date.now() + '-' + req.file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_');
+      const filePath = 'lesson-packages/' + safeName;
+      const { error: uploadError } = await supabase.storage
+        .from('uploads').upload(filePath, req.file.buffer, { contentType: req.file.mimetype });
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(filePath);
+      item.fileUrl = publicUrl;
+      item.originalName = req.file.originalname;
+      item.mimeType = req.file.mimetype;
+    }
+
+    packages[idx].items = packages[idx].items || [];
+    packages[idx].items.push(item);
+    await writeCollection('lessonPackages', packages);
+    res.status(201).json(item);
+  } catch(e) {
+    console.error('Lesson package add item error:', e);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+// Toggle publish/unpublish
+app.patch('/api/lesson-packages/:id/publish', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const packages = await readCollection('lessonPackages');
+    const idx = packages.findIndex(p => p.id === id);
+    if (idx === -1) return res.status(404).json({ error: 'not found' });
+    packages[idx].published = !packages[idx].published;
+    await writeCollection('lessonPackages', packages);
+    res.json({ ok: true, published: packages[idx].published });
+  } catch(e) {
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+// Delete package
+app.delete('/api/lesson-packages/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await deleteItem('lessonPackages', id);
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+// Delete item from package
+app.delete('/api/lesson-packages/:id/items/:itemId', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const itemId = parseInt(req.params.itemId);
+    const packages = await readCollection('lessonPackages');
+    const idx = packages.findIndex(p => p.id === id);
+    if (idx === -1) return res.status(404).json({ error: 'not found' });
+    packages[idx].items = (packages[idx].items || []).filter(item => item.id !== itemId);
+    await writeCollection('lessonPackages', packages);
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ error: 'server error' });
+  }
 });
 
 server.listen(PORT, () => {
