@@ -7,6 +7,8 @@ const {
   ensureCollection,
   readCollection,
   writeCollection,
+  upsertItem,
+  deleteItem,
   nextId,
   nextIdFor
 } = require('./lib/storage');
@@ -548,11 +550,11 @@ app.post('/api/proverbs', async (req, res) => {
 app.put('/api/proverbs/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const items = await readCollection('proverbs');
-    const idx = items.findIndex(x => x.id === id);
-    if (idx === -1) return res.status(404).json({ error: 'not found' });
-    items[idx] = { ...items[idx], ...req.body };
-    await writeCollection('proverbs', items);
+    const existing = await readCollection('proverbs');
+    const item = existing.find(x => x.id === id);
+    if (!item) return res.status(404).json({ error: 'not found' });
+    const updated = { ...item, ...req.body, id };
+    await upsertItem('proverbs', updated);
     res.json({ ok: true });
   } catch(e) {
     console.error('Proverbs put error:', e);
@@ -563,11 +565,7 @@ app.put('/api/proverbs/:id', async (req, res) => {
 app.delete('/api/proverbs/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const items = await readCollection('proverbs');
-    const idx = items.findIndex(x => x.id === id);
-    if (idx === -1) return res.status(404).json({ error: 'not found' });
-    items.splice(idx, 1);
-    await writeCollection('proverbs', items);
+    await deleteItem('proverbs', id);
     res.json({ ok: true });
   } catch(e) {
     console.error('Proverbs delete error:', e);
@@ -629,11 +627,7 @@ app.post('/api/dictionary', async (req, res) => {
 app.delete('/api/dictionary/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const items = await readCollection('dictionary');
-    const idx = items.findIndex(x => x.id === id);
-    if (idx === -1) return res.status(404).json({ error: 'not found' });
-    items.splice(idx, 1);
-    await writeCollection('dictionary', items);
+    await deleteItem('dictionary', id);
     res.json({ ok: true });
   } catch(e) {
     console.error('Dictionary delete error:', e);
@@ -670,11 +664,7 @@ app.post('/api/phrases', async (req, res) => {
 app.delete('/api/phrases/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const items = await readCollection('phrases');
-    const idx = items.findIndex(x => x.id === id);
-    if (idx === -1) return res.status(404).json({ error: 'not found' });
-    items.splice(idx, 1);
-    await writeCollection('phrases', items);
+    await deleteItem('phrases', id);
     res.json({ ok: true });
   } catch(e) {
     console.error('Phrases delete error:', e);
@@ -715,11 +705,7 @@ app.post('/api/forum/posts', async (req, res) => {
 app.delete('/api/forum/posts/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const posts = await readCollection('forumPosts');
-    const idx = posts.findIndex(x => x.id === id);
-    if (idx === -1) return res.status(404).json({ error: 'not found' });
-    posts.splice(idx, 1);
-    await writeCollection('forumPosts', posts);
+    await deleteItem('forumPosts', id);
     res.json({ ok: true });
   } catch(e) {
     console.error('Forum posts delete error:', e);
@@ -798,11 +784,7 @@ app.post('/api/materials/youtube', async (req, res) => {
 app.delete('/api/materials/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const items = await readCollection('materials');
-    const idx = items.findIndex(x => x.id === id);
-    if (idx === -1) return res.status(404).json({ error: 'not found' });
-    items.splice(idx, 1);
-    await writeCollection('materials', items);
+    await deleteItem('materials', id);
     res.json({ ok: true });
   } catch(e) {
     console.error('Materials delete error:', e);
@@ -848,11 +830,7 @@ app.post('/api/assignments/upload', upload.single('file'), async (req, res) => {
 app.delete('/api/assignments/submissions/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const items = await readCollection('assignmentSubmissions');
-    const idx = items.findIndex(x => x.id === id);
-    if (idx === -1) return res.status(404).json({ error: 'not found' });
-    items.splice(idx, 1);
-    await writeCollection('assignmentSubmissions', items);
+    await deleteItem('assignmentSubmissions', id);
     res.json({ ok: true });
   } catch(e) {
     console.error('Assignment delete error:', e);
@@ -889,11 +867,7 @@ app.post('/api/quizzes', async (req, res) => {
 app.delete('/api/quizzes/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const items = await readCollection('quizzes');
-    const idx = items.findIndex(x => x.id === id);
-    if (idx === -1) return res.status(404).json({ error: 'not found' });
-    items.splice(idx, 1);
-    await writeCollection('quizzes', items);
+    await deleteItem('quizzes', id);
     res.json({ ok: true });
   } catch(e) {
     console.error('Quizzes delete error:', e);
@@ -1153,11 +1127,7 @@ app.put('/api/manual-journal/:id', async (req, res) => {
 app.delete('/api/manual-journal/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const items = await readCollection('manualJournal');
-    const idx = items.findIndex(x => x.id === id);
-    if (idx === -1) return res.status(404).json({ error: 'not found' });
-    items.splice(idx, 1);
-    await writeCollection('manualJournal', items);
+    await deleteItem('manualJournal', id);
     res.json({ ok: true });
   } catch(e) {
     console.error('Manual journal delete error:', e);
@@ -1194,11 +1164,7 @@ app.post('/api/edit-tasks', async (req, res) => {
 app.delete('/api/edit-tasks/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const items = await readCollection('editTasks');
-    const idx = items.findIndex(x => x.id === id);
-    if (idx === -1) return res.status(404).json({ error: 'not found' });
-    items.splice(idx, 1);
-    await writeCollection('editTasks', items);
+    await deleteItem('editTasks', id);
     res.json({ ok: true });
   } catch(e) {
     console.error('Edit tasks delete error:', e);
@@ -1299,11 +1265,7 @@ app.post('/api/essays/upload', upload.single('file'), async (req, res) => {
 app.delete('/api/essays/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const items = await readCollection('essays');
-    const idx = items.findIndex(x => x.id === id);
-    if (idx === -1) return res.status(404).json({ error: 'not found' });
-    items.splice(idx, 1);
-    await writeCollection('essays', items);
+    await deleteItem('essays', id);
     res.json({ ok: true });
   } catch(e) {
     console.error('Essays delete error:', e);
@@ -1340,11 +1302,7 @@ app.post('/api/text-materials', async (req, res) => {
 app.delete('/api/text-materials/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const items = await readCollection('textMaterials');
-    const idx = items.findIndex(x => x.id === id);
-    if (idx === -1) return res.status(404).json({ error: 'not found' });
-    items.splice(idx, 1);
-    await writeCollection('textMaterials', items);
+    await deleteItem('textMaterials', id);
     res.json({ ok: true });
   } catch(e) {
     console.error('Text materials delete error:', e);
