@@ -1646,6 +1646,23 @@ app.post('/api/lesson-packages/:id/items', upload.single('file'), async (req, re
       item.url = url || '';
     } else if (type === 'quiz') {
       item.quizId = parseInt(quizId);
+    } else if (type === 'note') {
+      item.content = content || '';
+    } else if (type === 'assignment') {
+      item.content = content || '';
+      if (req.file) {
+        const safeName = Date.now() + '-' + req.file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_');
+        const filePath = 'lesson-packages/' + safeName;
+        const { error: uploadError } = await supabase.storage
+          .from('uploads').upload(filePath, req.file.buffer, { contentType: req.file.mimetype });
+        if (uploadError) throw uploadError;
+        const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(filePath);
+        item.fileUrl = publicUrl;
+        item.originalName = req.file.originalname;
+      }
+    } else if (type === 'editTask') {
+      item.content = content || '';
+      item.correctText = req.body.correctText || '';
     } else if (type === 'file' && req.file) {
       const safeName = Date.now() + '-' + req.file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_');
       const filePath = 'lesson-packages/' + safeName;
