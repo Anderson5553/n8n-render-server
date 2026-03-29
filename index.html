@@ -155,18 +155,29 @@
 
         /* incoming call modal */
         .incoming-call {
-            display:none; position:fixed; top:80px; right:24px;
+            display:none; position:fixed; top:50%; left:50%;
+            transform:translate(-50%,-50%);
             background:linear-gradient(135deg,var(--primary),var(--primary-light));
-            color:#fff; border-radius:16px; padding:20px 24px;
-            z-index:5000; box-shadow:0 16px 40px rgba(0,0,0,0.4);
-            min-width:280px; animation:slideInRight 0.4s ease-out;
+            color:#fff; border-radius:20px; padding:28px 28px;
+            z-index:5000; box-shadow:0 24px 60px rgba(0,0,0,0.5);
+            width:90%; max-width:320px; text-align:center;
+            animation:pulse-ring 1s ease-in-out infinite;
+        }
+        @keyframes pulse-ring {
+            0%,100% { box-shadow:0 24px 60px rgba(0,0,0,0.5),0 0 0 0 rgba(244,180,26,0.4); }
+            50% { box-shadow:0 24px 60px rgba(0,0,0,0.5),0 0 0 16px rgba(244,180,26,0); }
         }
         .incoming-call.show { display:block; }
-        .incoming-call-title { font-weight:700; font-size:1rem; margin-bottom:4px; }
-        .incoming-call-sub { font-size:0.82rem; opacity:0.85; margin-bottom:16px; }
-        .incoming-call-btns { display:flex; gap:10px; }
-        .call-accept-btn { background:#22c55e; color:#fff; border:none; border-radius:10px; padding:10px 20px; cursor:pointer; font-weight:700; flex:1; }
-        .call-decline-btn { background:rgba(255,255,255,0.2); color:#fff; border:none; border-radius:10px; padding:10px 20px; cursor:pointer; font-weight:700; flex:1; }
+        .incoming-call-icon { font-size:3rem; margin-bottom:12px; animation:ring-shake 0.5s ease-in-out infinite; }
+        @keyframes ring-shake {
+            0%,100% { transform:rotate(-15deg); }
+            50% { transform:rotate(15deg); }
+        }
+        .incoming-call-title { font-weight:800; font-size:1.15rem; margin-bottom:6px; }
+        .incoming-call-sub { font-size:0.88rem; opacity:0.85; margin-bottom:20px; }
+        .incoming-call-btns { display:flex; gap:12px; justify-content:center; }
+        .call-accept-btn { background:#22c55e; color:#fff; border:none; border-radius:12px; padding:12px 24px; cursor:pointer; font-weight:700; font-size:1rem; flex:1; }
+        .call-decline-btn { background:rgba(255,255,255,0.2); color:#fff; border:none; border-radius:12px; padding:12px 24px; cursor:pointer; font-weight:700; font-size:1rem; flex:1; }
 
         /* ── BULK SELECT ── */
         .bulk-toolbar {
@@ -979,6 +990,7 @@
 
 <!-- ═══ INCOMING CALL ═══ -->
 <div class="incoming-call" id="incomingCall">
+    <div class="incoming-call-icon">📞</div>
     <div class="incoming-call-title" id="incomingCallTitle">შემომავალი ზარი</div>
     <div class="incoming-call-sub" id="incomingCallSub">გსურთ პასუხი?</div>
     <div class="incoming-call-btns">
@@ -3212,10 +3224,19 @@ let pendingFrom = null;
 const STUN = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
 
 function initSocket() {
-    if (socket) return;
-    socket = io();
+    if (socket) {
+        // already connected — just re-join
+        if (currentUsername) socket.emit('join', { username: currentUsername });
+        return;
+    }
+    socket = io({ reconnection: true, reconnectionDelay: 1000 });
 
     socket.on('connect', () => {
+        console.log('Socket connected:', socket.id);
+        if (currentUsername) socket.emit('join', { username: currentUsername });
+    });
+
+    socket.on('reconnect', () => {
         if (currentUsername) socket.emit('join', { username: currentUsername });
     });
 
@@ -3228,39 +3249,82 @@ function initSocket() {
         const ch = msg.channel || 'all';
         if (!chatMessages[ch]) chatMessages[ch] = [];
         chatMessages[ch].push(msg);
-        if (document.getElementById('chatOverlay').classList.contains('open') && chatChannel === ch) {
+        const overlay = document.getElementById('chatOverlay');
+        if (overlay && overlay.classList.contains('open') && chatChannel === ch) {
             appendChatMessage(msg);
         } else if (!msg.mine) {
-            // show dot
-            document.getElementById('chatDot') && (document.getElementById('chatDot').style.display = 'block');
-            document.getElementById('chatDotTeacher') && (document.getElementById('chatDotTeacher').style.display = 'block');
+            const d1 = document.getElementById('chatDot');
+            const d2 = document.getElementById('chatDotTeacher');
+            if (d1) d1.style.display = 'block';
+            if (d2) d2.style.display = 'block';
         }
     });
 
-    // WebRTC signaling
+    // ── INCOMING CALL (all users including students) ──
     socket.on('call-invite', async ({ from, callType, offer, channel }) => {
+        // don't answer own calls
+        if (from === currentUsername) return;
         pendingOffer = offer;
         pendingFrom = from;
-        document.getElementById('incomingCallTitle').textContent = from + ' გირეკავს';
-        document.getElementById('incomingCallSub').textContent = channel === 'all' ? 'ჯგუფური ზარი' : 'პირადი ზარი';
-        document.getElementById('incomingCall').classList.add('show');
+        const titleEl = document.getElementById('incomingCallTitle');
+        const subEl = document.getElementById('incomingCallSub');
+        const modal = document.getElementById('incomingCall');
+        if (titleEl) titleEl.textContent = from + ' გირეკავს 📞';
+        if (subEl) subEl.textContent = channel === 'all' ? '🔊 ჯგუფური ზარი' : '🔒 პირადი ზარი';
+        if (modal) {
+            modal.classList.add('show');
+            // play ring sound
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const ringInterval = setInterval(() => {
+                    if (!document.getElementById('incomingCall').classList.contains('show')) {
+                        clearInterval(ringInterval);
+                        return;
+                    }
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.frequency.value = 480;
+                    gain.gain.value = 0.3;
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.3);
+                }, 800);
+                modal._ringInterval = ringInterval;
+            } catch(e) {}
+            // auto-decline after 30s
+            modal._autoDecline = setTimeout(() => {
+                if (modal.classList.contains('show')) declineCall();
+            }, 30000);
+        }
     });
 
     socket.on('call-answer', async ({ from, answer }) => {
-        if (peerConnection) {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-            document.getElementById('callBarStatus').textContent = 'დაკავშირებულია ✓';
+        if (peerConnection && peerConnection.signalingState !== 'closed') {
+            try {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+                // flush queued ICE
+                (window._pendingIce || []).forEach(c => peerConnection.addIceCandidate(c).catch(()=>{}));
+                window._pendingIce = [];
+                document.getElementById('callBarStatus').textContent = 'დაკავშირებულია ✓';
+            } catch(e) { console.error('call-answer error:', e); }
         }
     });
 
     socket.on('call-ice', async ({ from, candidate }) => {
-        if (peerConnection && candidate) {
-            try { await peerConnection.addIceCandidate(new RTCIceCandidate(candidate)); } catch(e) {}
+        if (!candidate) return;
+        const ice = new RTCIceCandidate(candidate);
+        if (peerConnection && peerConnection.remoteDescription) {
+            peerConnection.addIceCandidate(ice).catch(()=>{});
+        } else {
+            // queue until remote description is set
+            if (!window._pendingIce) window._pendingIce = [];
+            window._pendingIce.push(ice);
         }
     });
 
     socket.on('call-end', ({ from }) => {
-        showToast(from + ' გათიშა ✓');
+        showToast(from + ' გათიშა');
         endCall(false);
     });
 }
@@ -3268,9 +3332,12 @@ function initSocket() {
 /* ── CHAT UI ── */
 function openChat() {
     initSocket();
-    document.getElementById('chatOverlay').classList.add('open');
-    document.getElementById('chatDot') && (document.getElementById('chatDot').style.display = 'none');
-    document.getElementById('chatDotTeacher') && (document.getElementById('chatDotTeacher').style.display = 'none');
+    const overlay = document.getElementById('chatOverlay');
+    if (overlay) overlay.classList.add('open');
+    const d1 = document.getElementById('chatDot');
+    const d2 = document.getElementById('chatDotTeacher');
+    if (d1) d1.style.display = 'none';
+    if (d2) d2.style.display = 'none';
     renderChatMessages();
     setTimeout(() => { const el = document.getElementById('chatInput'); if(el) el.focus(); }, 100);
     // teacher sees call button, students don't
@@ -3375,67 +3442,107 @@ async function startCall() {
 }
 
 async function initiateCall(target) {
+    if (!socket) { alert('ჩატი არ არის გახსნილი!'); return; }
+    window._pendingIce = [];
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         peerConnection = new RTCPeerConnection(STUN);
         localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
         peerConnection.ontrack = e => {
             const audio = document.getElementById('remoteAudio');
-            if (audio) audio.srcObject = e.streams[0];
+            if (audio) { audio.srcObject = e.streams[0]; audio.play().catch(()=>{}); }
         };
         peerConnection.onicecandidate = e => {
-            if (e.candidate) socket.emit('call-ice', { to: target, candidate: e.candidate });
+            if (e.candidate && socket) socket.emit('call-ice', { to: target, candidate: e.candidate });
+        };
+        peerConnection.onconnectionstatechange = () => {
+            const status = document.getElementById('callBarStatus');
+            if (!status) return;
+            const state = peerConnection.connectionState;
+            if (state === 'connected') status.textContent = 'დაკავშირებულია ✓';
+            else if (state === 'disconnected' || state === 'failed') { status.textContent = 'კავშირი გაწყდა'; endCall(true); }
         };
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
-        socket.emit('call-invite', { to: target, callType: 'audio', offer });
-        // show call bar
-        document.getElementById('callBarTitle').textContent = target === 'all' ? 'ჯგუფური ზარი' : '📞 ' + target;
+        socket.emit('call-invite', { to: target, callType: 'audio', offer, channel: target === 'all' ? 'all' : 'private' });
+        document.getElementById('callBarTitle').textContent = target === 'all' ? '🔊 ჯგუფური ზარი' : '📞 ' + target;
         document.getElementById('callBarStatus').textContent = 'ელოდება პასუხს...';
         document.getElementById('callBar').classList.add('active');
+        callTarget = target;
     } catch(e) {
         alert('მიკროფონი ვერ მოიძებნა: ' + e.message);
+        endCall(false);
     }
 }
 
 async function acceptCall() {
-    document.getElementById('incomingCall').classList.remove('show');
+    const modal = document.getElementById('incomingCall');
+    if (modal) {
+        modal.classList.remove('show');
+        if (modal._ringInterval) clearInterval(modal._ringInterval);
+        if (modal._autoDecline) clearTimeout(modal._autoDecline);
+    }
+    window._pendingIce = [];
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         peerConnection = new RTCPeerConnection(STUN);
         localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
         peerConnection.ontrack = e => {
             const audio = document.getElementById('remoteAudio');
-            if (audio) audio.srcObject = e.streams[0];
+            if (audio) { audio.srcObject = e.streams[0]; audio.play().catch(()=>{}); }
         };
         peerConnection.onicecandidate = e => {
-            if (e.candidate) socket.emit('call-ice', { to: pendingFrom, candidate: e.candidate });
+            if (e.candidate && socket) socket.emit('call-ice', { to: pendingFrom, candidate: e.candidate });
+        };
+        peerConnection.onconnectionstatechange = () => {
+            const status = document.getElementById('callBarStatus');
+            if (status) status.textContent = peerConnection.connectionState === 'connected' ? 'დაკავშირებულია ✓' : peerConnection.connectionState;
         };
         await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer));
+        // add queued ICE candidates
+        (window._pendingIce || []).forEach(c => peerConnection.addIceCandidate(c).catch(()=>{}));
+        window._pendingIce = [];
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
-        socket.emit('call-answer', { to: pendingFrom, answer });
+        if (socket) socket.emit('call-answer', { to: pendingFrom, answer });
         document.getElementById('callBarTitle').textContent = '📞 ' + pendingFrom;
         document.getElementById('callBarStatus').textContent = 'დაკავშირებულია ✓';
         document.getElementById('callBar').classList.add('active');
+        callTarget = pendingFrom;
     } catch(e) {
         alert('შეცდომა: ' + e.message);
+        endCall(false);
     }
 }
 
 function declineCall() {
-    document.getElementById('incomingCall').classList.remove('show');
-    socket.emit('call-end', { to: pendingFrom });
-    pendingOffer = null; pendingFrom = null;
+    const modal = document.getElementById('incomingCall');
+    if (modal) {
+        modal.classList.remove('show');
+        if (modal._ringInterval) clearInterval(modal._ringInterval);
+        if (modal._autoDecline) clearTimeout(modal._autoDecline);
+    }
+    if (socket && pendingFrom) socket.emit('call-end', { to: pendingFrom });
+    pendingOffer = null;
+    pendingFrom = null;
+    window._pendingIce = [];
 }
 
 function endCall(notify = true) {
     if (notify && socket) socket.emit('call-end', { to: callTarget });
-    if (peerConnection) { peerConnection.close(); peerConnection = null; }
+    if (peerConnection) { try { peerConnection.close(); } catch(e){} peerConnection = null; }
     if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+    const audio = document.getElementById('remoteAudio');
+    if (audio) audio.srcObject = null;
     document.getElementById('callBar').classList.remove('active');
-    document.getElementById('incomingCall').classList.remove('show');
+    const modal = document.getElementById('incomingCall');
+    if (modal) {
+        modal.classList.remove('show');
+        if (modal._ringInterval) clearInterval(modal._ringInterval);
+        if (modal._autoDecline) clearTimeout(modal._autoDecline);
+    }
     isMuted = false;
+    window._pendingIce = [];
     const muteBtn = document.getElementById('muteBtn');
     if (muteBtn) { muteBtn.classList.remove('muted'); muteBtn.innerHTML = '<i class="fa-solid fa-microphone"></i>'; }
 }
@@ -3463,6 +3570,8 @@ window.onload = async function() {
     loadMaterials();
     loadNotifications();
     maybeShowWelcomeModal();
+    // init socket for all logged-in users so they receive calls
+    if (currentUsername) initSocket();
 
     // warm search cache in background
     setTimeout(() => buildSearchCache().catch(() => {}), 2000);
