@@ -825,7 +825,6 @@
         <div class="nav-group">
             <button class="nav-group-btn" onclick="toggleDropdown(this)"><i class="fa-solid fa-pencil"></i> დავალება <i class="fa-solid fa-chevron-down chevron"></i></button>
             <div class="nav-dropdown">
-                <button onclick="closeDropdowns();switchTab('lessonPackages')"><i class="fa-solid fa-book-open"></i> ეროვნულის საკითხები</button>
                 <button onclick="closeDropdowns();switchTab('assignments')"><i class="fa-solid fa-file-arrow-up"></i> დავალებები</button>
                 <button onclick="closeDropdowns();switchTab('essays')"><i class="fa-solid fa-award"></i> მაღალქულიანი ესეები</button>
                 <button onclick="closeDropdowns();switchTab('editTasks')"><i class="fa-solid fa-highlighter"></i> რედაქტირება</button>
@@ -969,7 +968,7 @@
         <div style="text-align:center;color:var(--text-muted);font-size:0.85rem;padding:20px;">შეიყვანეთ შეტყობინება...</div>
     </div>
     <div class="chat-input-area">
-        <textarea class="chat-input" id="chatInput" placeholder="შეტყობინება... (Enter — გაგზავნა, Shift+Enter — ახალი სტრიქონი)" rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage();}" style="resize:none;overflow-y:auto;max-height:100px;line-height:1.5;"></textarea>
+        <input class="chat-input" id="chatInput" placeholder="შეტყობინება..." onkeydown="if(event.key==='Enter')sendChatMessage()">
         <button class="chat-send-btn" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
     </div>
 </div>
@@ -980,7 +979,7 @@
         <div class="call-bar-title" id="callBarTitle">დარეკვა...</div>
         <div class="call-bar-status" id="callBarStatus">მოლოდინი...</div>
     </div>
-    <audio id="remoteAudio" autoplay playsinline></audio>
+    <audio id="remoteAudio" autoplay></audio>
     <button class="call-btn call-btn-mute" id="muteBtn" onclick="toggleMute()" title="დადუმება">
         <i class="fa-solid fa-microphone"></i>
     </button>
@@ -1541,7 +1540,6 @@ function switchTab(tabId) {
         profile: renderProfileStats,
         media: loadMedia,
         about: loadAbout,
-        lessonPackages: loadLessonPackages,
         studentActivity: () => { loadStudentActivity(); },
         teacherPanel: () => { loadPendingUsers(); loadAllUsers(); loadTeacherAssignments(); refreshTeacherJournal(); loadManualJournal(); },
         editTasks: () => { loadEditTasks(); if (isAdmin) loadEditSubmissions(); },
@@ -2646,90 +2644,6 @@ async function createEditTask() {
     ['editTaskTitle','editTaskInstructions','editTaskSource','editTaskCorrect'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
     showToast('გამოქვეყნდა ✓'); loadEditTasks();
 }
-// ── DIFF ENGINE ──────────────────────────────────────────────────────────────
-function diffWords(original, typed) {
-    const origWords = original.split(/(\s+)/);
-    const typedWords = typed.split(/(\s+)/);
-    let result = '';
-    const maxLen = Math.max(origWords.length, typedWords.length);
-    for (let i = 0; i < maxLen; i++) {
-        const o = origWords[i] || '';
-        const t = typedWords[i] || '';
-        if (!t && o) {
-            // missing word
-            result += `<span style="background:#fecaca;color:#991b1b;border-radius:3px;padding:0 2px;text-decoration:line-through;">${escapeHtml(o)}</span> `;
-        } else if (!o && t) {
-            // extra word
-            result += `<span style="background:#fef08a;color:#854d0e;border-radius:3px;padding:0 2px;">${escapeHtml(t)}</span> `;
-        } else if (o.trim() === '' || t.trim() === '') {
-            result += escapeHtml(t || o);
-        } else if (o === t) {
-            result += `<span style="color:var(--text);">${escapeHtml(t)}</span>`;
-        } else {
-            // wrong word - show typed in red, show correct below
-            result += `<span style="background:#fecaca;color:#991b1b;border-radius:3px;padding:0 2px;text-decoration:underline wavy #ef4444;" title="სწორია: ${escapeHtml(o)}">${escapeHtml(t)}</span>`;
-        }
-        if (o.trim() !== '' && i < maxLen - 1) result += ' ';
-    }
-    return result;
-}
-
-function diffChars(correct, typed) {
-    // character-level diff for more precision
-    let result = '';
-    let i = 0, j = 0;
-    while (i < correct.length || j < typed.length) {
-        if (i >= correct.length) {
-            result += `<span style="background:#fef08a;color:#854d0e;">${escapeHtml(typed[j])}</span>`;
-            j++;
-        } else if (j >= typed.length) {
-            result += `<span style="background:#fecaca;color:#991b1b;text-decoration:line-through;">${escapeHtml(correct[i])}</span>`;
-            i++;
-        } else if (correct[i] === typed[j]) {
-            result += escapeHtml(typed[j]);
-            i++; j++;
-        } else {
-            result += `<span style="background:#fecaca;color:#991b1b;" title="სწორია: '${escapeHtml(correct[i])}'">` + escapeHtml(typed[j]) + `</span>`;
-            i++; j++;
-        }
-    }
-    return result;
-}
-
-function updateEditPreview(taskId, correctText) {
-    const input = document.getElementById('editAnswer_' + taskId);
-    const preview = document.getElementById('editPreview_' + taskId);
-    const score = document.getElementById('editScore_' + taskId);
-    if (!input || !preview) return;
-
-    const typed = input.value;
-    if (!typed.trim()) {
-        preview.innerHTML = '<span style="color:var(--text-muted);">აქ გამოჩნდება შეცდომები...</span>';
-        if (score) score.textContent = '';
-        return;
-    }
-
-    if (!correctText) {
-        preview.innerHTML = '<span style="color:var(--text-muted);">სწორი ვერსია არ არის მითითებული</span>';
-        return;
-    }
-
-    // word-level diff
-    const highlighted = diffWords(correctText, typed);
-    preview.innerHTML = highlighted;
-
-    // calculate accuracy score
-    const correctWords = correctText.trim().split(/\s+/);
-    const typedWords = typed.trim().split(/\s+/);
-    let correct = 0;
-    correctWords.forEach((w, i) => { if (typedWords[i] === w) correct++; });
-    const pct = Math.round((correct / correctWords.length) * 100);
-    if (score) {
-        const color = pct >= 90 ? '#22c55e' : pct >= 70 ? '#f59e0b' : '#ef4444';
-        score.innerHTML = `სიზუსტე: <strong style="color:${color};">${pct}%</strong> (${correct}/${correctWords.length} სიტყვა სწორია)`;
-    }
-}
-
 async function loadEditTasks() {
     const list = document.getElementById('editTasksList');
     if (!list) return;
@@ -2740,41 +2654,30 @@ async function loadEditTasks() {
         list.innerHTML = tasks.map(t => {
             const delBtn = isAdmin ? `<button class="btn-delete show" onclick="deleteEditTask(${t.id})"><i class="fa-solid fa-trash"></i></button>` : '';
             const teacherAnswer = isAdmin && t.correctText
-                ? `<div style="margin-top:12px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:12px;">
-                    <strong style="color:#22c55e;">✓ სწორი ვარიანტი:</strong>
-                    <div style="white-space:pre-wrap;margin-top:6px;line-height:1.7;">${escapeHtml(t.correctText)}</div>
-                  </div>` : '';
-
-            const correctJson = t.correctText ? JSON.stringify(t.correctText) : 'null';
+                ? `<div style="margin-top:12px;background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:12px;"><strong>✓ სწორი ვარიანტი:</strong><div style="white-space:pre-wrap;margin-top:8px;line-height:1.8;">${escapeHtml(t.correctText)}</div></div>`
+                : '';
             const studentForm = !isAdmin && currentUser !== 'სტუმარი' ? `
-                <div style="margin-top:16px;">
-                    <label style="display:block;margin-bottom:8px;font-weight:600;color:var(--text);">
-                        ✏️ შეიყვანე გასწორებული ვარიანტი:
-                    </label>
-                    <textarea
-                        id="editAnswer_${t.id}"
-                        placeholder="ჩაწერე შენი გასწორებული ტექსტი..."
-                        rows="8"
-                        style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);resize:vertical;font-family:inherit;line-height:1.8;font-size:0.95rem;"></textarea>
-                    <button class="btn btn-accent" onclick="submitEditSolution(${t.id}, ${correctJson})" style="margin-top:10px;width:100%;padding:12px;font-size:0.95rem;">
+                <div style="margin-top:14px;">
+                    <label style="display:block;margin-bottom:8px;font-weight:600;">✏️ შეიყვანე შენი გასწორებული ვარიანტი:</label>
+                    <textarea id="editAnswer_${t.id}" rows="8" placeholder="ჩაწერე გასწორებული ტექსტი..."
+                        style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);resize:vertical;font-family:inherit;line-height:1.8;font-size:0.95rem;box-sizing:border-box;"></textarea>
+                    <button class="btn btn-accent" onclick="submitEditSolution(${t.id})" style="margin-top:10px;width:100%;padding:12px;">
                         <i class="fa-solid fa-paper-plane"></i> ჩაბარება და შემოწმება
                     </button>
                     <div id="editResult_${t.id}" style="display:none;margin-top:16px;"></div>
                 </div>` : '';
-
-            return `<div class="card" style="margin-bottom:20px;">
-                ${delBtn}
+            return `<div class="card" style="margin-bottom:20px;">${delBtn}
                 <h3 style="margin-bottom:8px;">${escapeHtml(t.title)}</h3>
                 ${t.instructions ? `<p style="color:var(--text-muted);margin-bottom:10px;">${escapeHtml(t.instructions)}</p>` : ''}
-                <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:14px;">
-                    <strong style="color:#3b82f6;">📄 საწყისი ტექსტი (შეცდომებიანი):</strong>
-                    <div style="white-space:pre-wrap;margin-top:8px;line-height:1.8;font-size:0.95rem;">${escapeHtml(t.sourceText)}</div>
+                <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px;">
+                    <strong style="color:#3b82f6;">📄 შეცდომებიანი ტექსტი:</strong>
+                    <div style="white-space:pre-wrap;margin-top:8px;line-height:1.8;">${escapeHtml(t.sourceText)}</div>
                 </div>
                 ${teacherAnswer}
                 ${studentForm}
             </div>`;
         }).join('');
-    } catch (e) { console.error('loadEditTasks error:', e); }
+    } catch (e) {}
 }
 async function deleteEditTask(id) {
     try {
@@ -2784,114 +2687,140 @@ async function deleteEditTask(id) {
         loadEditTasks();
     } catch(e) { alert('შეცდომა: ' + e.message); }
 }
-async function submitEditSolution(taskId, correctText) {
+async function submitEditSolution(taskId) {
     const input = document.getElementById('editAnswer_' + taskId);
     const text = input ? input.value.trim() : '';
     if (!text) { alert('ჩაწერე ტექსტი.'); return; }
 
     // Save to DB
     try {
-        await fetch('/api/edit-submissions', {
+        const resp = await fetch('/api/edit-submissions', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ taskId, student: currentUsername || currentUser, text })
         });
+        const data = resp.ok ? await resp.json() : {};
+
+        // Show result with diff
+        const resultEl = document.getElementById('editResult_' + taskId);
+        if (resultEl) {
+            resultEl.style.display = 'block';
+            // fetch the task to get correctText
+            const tResp = await fetch('/api/edit-tasks');
+            const tasks = tResp.ok ? await tResp.json() : [];
+            const task = tasks.find(t => t.id === taskId);
+            if (task && task.correctText) {
+                resultEl.innerHTML = buildEditResult(text, task.correctText);
+            } else {
+                resultEl.innerHTML = '<div style="padding:14px;background:rgba(34,197,94,0.1);border-radius:8px;color:#22c55e;font-weight:600;">✓ ჩაბარდა! მასწავლებელი შეამოწმებს.</div>';
+            }
+        }
+
         await fetch('/api/notifications', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ user: 'teacher', kind: 'editSubmission', message: (currentUsername || currentUser) + ' ჩააბარა რედაქტირება' })
         });
         loadNotifications();
-    } catch(e) { console.error('Submit error:', e); }
-
-    // Show result
-    const resultEl = document.getElementById('editResult_' + taskId);
-    if (resultEl && correctText) {
-        resultEl.style.display = 'block';
-        resultEl.innerHTML = buildEditResult(text, correctText);
-    } else if (resultEl) {
-        resultEl.style.display = 'block';
-        resultEl.innerHTML = '<div style="padding:14px;background:rgba(34,197,94,0.1);border-radius:8px;color:#22c55e;font-weight:600;">✓ ჩაბარდა! მასწავლებელი შეამოწმებს.</div>';
+        showToast('ჩაბარდა ✓');
+    } catch(e) {
+        console.error('Submit error:', e);
+        alert('შეცდომა: ' + e.message);
     }
-
-    showToast('ჩაბარდა ✓');
 }
 
 function buildEditResult(typed, correct) {
-    // Split into tokens (words + punctuation + spaces)
-    const tokenize = str => str.match(/[ა-ჿჰ-ჿ\w]+|[^ა-ჿჰ-ჿ\w]/g) || [];
-    const typedTokens = tokenize(typed);
-    const correctTokens = tokenize(correct);
+    // Tokenize preserving spaces and punctuation
+    function tokenize(str) {
+        var result = [];
+        var current = '';
+        for (var i = 0; i < str.length; i++) {
+            var ch = str[i];
+            var isWord = (ch >= '\u10D0' && ch <= '\u10FF') || (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9');
+            if (isWord) {
+                current += ch;
+            } else {
+                if (current) { result.push({val: current, isWord: true}); current = ''; }
+                result.push({val: ch, isWord: false});
+            }
+        }
+        if (current) result.push({val: current, isWord: true});
+        return result;
+    }
 
-    // LCS-based diff
-    const n = typedTokens.length, m = correctTokens.length;
-    const dp = Array.from({length: n+1}, () => new Array(m+1).fill(0));
-    for (let i = 1; i <= n; i++)
-        for (let j = 1; j <= m; j++)
-            dp[i][j] = typedTokens[i-1] === correctTokens[j-1]
-                ? dp[i-1][j-1] + 1
-                : Math.max(dp[i-1][j], dp[i][j-1]);
+    var typedTokens = tokenize(typed);
+    var correctTokens = tokenize(correct);
 
-    // Backtrack
-    const ops = [];
-    let i = n, j = m;
+    // Compare word tokens only
+    var typedWords = typedTokens.filter(t => t.isWord).map(t => t.val);
+    var correctWords = correctTokens.filter(t => t.isWord).map(t => t.val);
+
+    // LCS dp
+    var n = typedWords.length, m = correctWords.length;
+    var dp = [];
+    for (var i = 0; i <= n; i++) { dp[i] = []; for (var j = 0; j <= m; j++) dp[i][j] = 0; }
+    for (var i = 1; i <= n; i++)
+        for (var j = 1; j <= m; j++)
+            dp[i][j] = typedWords[i-1] === correctWords[j-1] ? dp[i-1][j-1] + 1 : Math.max(dp[i-1][j], dp[i][j-1]);
+
+    // Backtrack to get ops
+    var ops = [];
+    var i = n, j = m;
     while (i > 0 || j > 0) {
-        if (i > 0 && j > 0 && typedTokens[i-1] === correctTokens[j-1]) {
-            ops.unshift({type: 'ok', val: typedTokens[i-1]});
+        if (i > 0 && j > 0 && typedWords[i-1] === correctWords[j-1]) {
+            ops.unshift({type: 'ok', typed: typedWords[i-1], correct: correctWords[j-1]});
             i--; j--;
         } else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) {
-            ops.unshift({type: 'missing', val: correctTokens[j-1]});
+            ops.unshift({type: 'missing', correct: correctWords[j-1]});
             j--;
         } else {
-            ops.unshift({type: 'wrong', val: typedTokens[i-1]});
+            ops.unshift({type: 'wrong', typed: typedWords[i-1]});
             i--;
         }
     }
 
-    // Count errors (skip spaces/punctuation)
-    let errors = 0, total = 0;
-    ops.forEach(op => {
-        if (/[ა-ჿჰ-ჿ\w]/.test(op.val)) {
-            total++;
-            if (op.type !== 'ok') errors++;
-        }
-    });
-    const correct_count = total - errors;
-    const pct = total > 0 ? Math.round((correct_count / total) * 100) : 100;
-    const color = pct >= 90 ? '#22c55e' : pct >= 70 ? '#f59e0b' : '#ef4444';
+    // Count
+    var errors = 0, total = correctWords.length;
+    ops.forEach(function(op) { if (op.type !== 'ok') errors++; });
+    var correctCount = total - errors;
+    var pct = total > 0 ? Math.round((correctCount / total) * 100) : 100;
+    var scoreColor = pct >= 90 ? '#22c55e' : pct >= 70 ? '#f59e0b' : '#ef4444';
+    var emoji = pct >= 90 ? '🏆' : pct >= 70 ? '👍' : '📝';
 
-    // Build highlighted HTML
-    let html = ops.map(op => {
-        if (op.type === 'ok') {
-            return '<span style="color:var(--text);">' + escapeHtml(op.val) + '</span>';
-        } else if (op.type === 'wrong') {
-            return '<span style="background:#fecaca;color:#991b1b;border-radius:3px;padding:0 2px;text-decoration:underline wavy #ef4444;" title="შეცდომა">' + escapeHtml(op.val) + '</span>';
-        } else {
-            // missing — show what should be there
-            return '<span style="background:#dcfce7;color:#166534;border-radius:3px;padding:0 2px;" title="გამოტოვებული">' + escapeHtml(op.val) + '</span>';
+    // Build HTML from ops — show typed words with color coding
+    var wi = 0;
+    var html = typedTokens.map(function(tok) {
+        if (!tok.isWord) return escapeHtml(tok.val);
+        var op = null;
+        // find next word op
+        for (var k = wi; k < ops.length; k++) {
+            if (ops[k].typed !== undefined) { op = ops[k]; wi = k + 1; break; }
         }
+        if (!op) return '<span style="background:#fecaca;color:#991b1b;border-radius:3px;padding:0 2px;">' + escapeHtml(tok.val) + '</span>';
+        if (op.type === 'ok') return '<span style="color:var(--text);">' + escapeHtml(tok.val) + '</span>';
+        return '<span style="background:#fecaca;color:#991b1b;border-radius:3px;padding:0 2px;text-decoration:underline wavy #ef4444;" title="სწორია: ' + escapeHtml(op.correct || '') + '">' + escapeHtml(tok.val) + '</span>';
     }).join('');
 
-    return \`
-        <div style="border-radius:12px;overflow:hidden;border:1px solid var(--border);">
-            <div style="padding:14px 16px;background:\${color}22;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-                <div style="font-weight:700;font-size:1.05rem;color:\${color};">
-                    \${pct >= 90 ? '🏆' : pct >= 70 ? '👍' : '📝'} შედეგი: \${pct}%
-                </div>
-                <div style="font-size:0.88rem;color:var(--text-muted);">
-                    სწორი: <strong style="color:#22c55e;">\${correct_count}</strong> / შეცდომა: <strong style="color:#ef4444;">\${errors}</strong>
-                </div>
-            </div>
-            <div style="padding:16px;">
-                <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:8px;display:flex;gap:14px;flex-wrap:wrap;">
-                    <span><span style="background:#fecaca;border-radius:2px;padding:0 4px;">წითელი</span> = შეცდომა</span>
-                    <span><span style="background:#dcfce7;border-radius:2px;padding:0 4px;">მწვანე</span> = გამოტოვებული</span>
-                    <span>თეთრი = სწორი</span>
-                </div>
-                <div style="white-space:pre-wrap;line-height:1.9;font-size:0.95rem;word-break:break-word;">\${html}</div>
-            </div>
-        </div>
-    \`;
+    // Add missing words inline
+    var missingHtml = '';
+    ops.filter(function(op) { return op.type === 'missing'; }).forEach(function(op) {
+        missingHtml += '<span style="background:#dcfce7;color:#166534;border-radius:3px;padding:0 3px;margin:0 2px;">' + escapeHtml(op.correct) + '</span> ';
+    });
+
+    return '<div style="border-radius:12px;overflow:hidden;border:1px solid var(--border);">' +
+        '<div style="padding:14px 16px;background:' + scoreColor + '22;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">' +
+            '<div style="font-weight:700;font-size:1.05rem;color:' + scoreColor + ';">' + emoji + ' შედეგი: ' + pct + '%</div>' +
+            '<div style="font-size:0.88rem;color:var(--text-muted);">სწორი: <strong style="color:#22c55e;">' + correctCount + '</strong> / შეცდომა: <strong style="color:#ef4444;">' + errors + '</strong> სიტყვა</div>' +
+        '</div>' +
+        '<div style="padding:16px;">' +
+            '<div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px;display:flex;gap:12px;flex-wrap:wrap;">' +
+                '<span><span style="background:#fecaca;border-radius:2px;padding:0 4px;">წითელი</span> = შეცდომა (hover-ზე სწორი ვარიანტი)</span>' +
+                '<span><span style="background:#dcfce7;border-radius:2px;padding:0 4px;">მწვანე</span> = გამოტოვებული</span>' +
+            '</div>' +
+            '<div style="white-space:pre-wrap;line-height:1.9;font-size:0.95rem;word-break:break-word;">' + html + '</div>' +
+            (missingHtml ? '<div style="margin-top:12px;padding:10px;background:rgba(34,197,94,0.08);border-radius:8px;font-size:0.88rem;"><strong>გამოტოვებული სიტყვები:</strong> ' + missingHtml + '</div>' : '') +
+        '</div>' +
+    '</div>';
 }
 async function loadEditSubmissions() {
     const wrap = document.getElementById('editSubmissionsList');
@@ -3446,16 +3375,7 @@ let callTarget = 'all';
 let pendingOffer = null;
 let pendingFrom = null;
 
-const STUN = { 
-    iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' }
-    ],
-    iceCandidatePoolSize: 10
-};
+const STUN = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
 
 function initSocket() {
     if (socket) {
@@ -3486,9 +3406,7 @@ function initSocket() {
         const overlay = document.getElementById('chatOverlay');
         if (overlay && overlay.classList.contains('open') && chatChannel === ch) {
             appendChatMessage(msg);
-            if (!msg.mine) playMsgSound();
         } else if (!msg.mine) {
-            playMsgSound();
             const d1 = document.getElementById('chatDot');
             const d2 = document.getElementById('chatDotTeacher');
             if (d1) d1.style.display = 'block';
@@ -3566,7 +3484,7 @@ function initSocket() {
 }
 
 /* ── CHAT UI ── */
-async function openChat() {
+function openChat() {
     initSocket();
     const overlay = document.getElementById('chatOverlay');
     if (overlay) overlay.classList.add('open');
@@ -3574,45 +3492,28 @@ async function openChat() {
     const d2 = document.getElementById('chatDotTeacher');
     if (d1) d1.style.display = 'none';
     if (d2) d2.style.display = 'none';
-    // Load history from DB if not loaded yet
-    await loadChatHistory(chatChannel);
     renderChatMessages();
     setTimeout(() => { const el = document.getElementById('chatInput'); if(el) el.focus(); }, 100);
+    // teacher sees call button, students don't
     const callBtn = document.getElementById('callStartBtn');
     if (callBtn) callBtn.style.display = isAdmin ? 'block' : 'none';
-}
-
-async function loadChatHistory(channel) {
-    if (chatMessages[channel] && chatMessages[channel].length > 0) return; // already loaded
-    try {
-        const resp = await fetch('/api/chat/history?channel=' + encodeURIComponent(channel) + '&limit=50');
-        if (!resp.ok) return;
-        const msgs = await resp.json();
-        if (!chatMessages[channel]) chatMessages[channel] = [];
-        // merge - avoid duplicates
-        const existingTimes = new Set(chatMessages[channel].map(m => m.time + m.from));
-        const newMsgs = msgs.filter(m => !existingTimes.has(m.time + m.from));
-        chatMessages[channel] = [...newMsgs, ...chatMessages[channel]];
-    } catch(e) { console.error('History load error:', e); }
 }
 
 function closeChat() {
     document.getElementById('chatOverlay').classList.remove('open');
 }
 
-async function setChatChannel(ch, btn) {
+function setChatChannel(ch, btn) {
     chatChannel = ch;
     chatTarget = ch === 'all' ? null : ch.replace('private:', '');
     document.querySelectorAll('.chat-tab').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
     document.getElementById('chatHeaderTitle').textContent = ch === 'all' ? 'ყველა' : '💬 ' + chatTarget;
-    await loadChatHistory(ch);
     renderChatMessages();
 }
 
-async function selectChatUser(username) {
-    const me = currentUsername;
-    const ch = 'private:' + [me, username].sort().join(':');
+function selectChatUser(username) {
+    const ch = 'private:' + username;
     chatChannel = ch;
     chatTarget = username;
     const privateTab = document.getElementById('chatPrivateTab');
@@ -3620,7 +3521,6 @@ async function selectChatUser(username) {
     document.querySelectorAll('.chat-tab').forEach(b => b.classList.remove('active'));
     if (privateTab) privateTab.classList.add('active');
     document.getElementById('chatHeaderTitle').textContent = '💬 ' + username;
-    await loadChatHistory(ch);
     renderChatMessages();
     document.querySelectorAll('.chat-user-pill').forEach(p => {
         p.classList.toggle('selected', p.dataset.username === username);
@@ -3663,27 +3563,11 @@ function appendChatMessage(msg) {
 function buildMsgHtml(msg) {
     const mine = msg.mine || msg.from === currentUsername;
     const time = msg.time ? new Date(msg.time).toLocaleTimeString('ka-GE', {hour:'2-digit',minute:'2-digit'}) : '';
-    const text = escapeHtml(msg.text || '').replace(/\n/g, '<br>');
-    return `<div class="chat-msg ${mine?'mine':'other'}" style="animation:fadeIn 0.2s ease;">
+    return `<div class="chat-msg ${mine?'mine':'other'}">
         ${!mine ? `<div class="chat-msg-author">${escapeHtml(msg.from)}</div>` : ''}
-        <div style="word-break:break-word;line-height:1.5;">${text}</div>
-        <div class="chat-msg-time">${time}${mine ? ' ✓' : ''}</div>
+        ${escapeHtml(msg.text)}
+        <div class="chat-msg-time">${time}</div>
     </div>`;
-}
-
-function playMsgSound() {
-    try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.value = 880;
-        gain.gain.setValueAtTime(0.15, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.15);
-    } catch(e) {}
 }
 
 function sendChatMessage() {
@@ -3692,55 +3576,27 @@ function sendChatMessage() {
     if (!text || !socket) return;
     if (chatChannel === 'all') {
         socket.emit('chat-message', { to: 'all', text });
-    } else if (chatTarget) {
-        socket.emit('chat-message', { to: chatTarget, text });
     } else {
-        socket.emit('chat-message', { to: 'all', text });
+        socket.emit('chat-message', { to: chatTarget, text });
     }
     input.value = '';
-    input.style.height = 'auto';
 }
 
 /* ── CALL ── */
 async function startCall() {
     if (!isAdmin) return;
-    showCallTargetModal();
-}
-
-function showCallTargetModal() {
+    // teacher chooses target
     const users = onlineUsersList.map(u => u.username);
-    const existing = document.getElementById('callTargetModal');
-    if (existing) existing.remove();
-    const modal = document.createElement('div');
-    modal.id = 'callTargetModal';
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
-    modal.innerHTML = `
-        <div style="background:var(--card);border-radius:16px;padding:28px;min-width:280px;max-width:360px;width:90%;">
-            <h3 style="margin:0 0 16px;font-size:1.1rem;">📞 ვის დაურეკოთ?</h3>
-            <div style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;">
-                <button onclick="closeCallTargetModal();initiateCall('all')" style="padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer;text-align:left;font-size:0.95rem;display:flex;align-items:center;gap:10px;">
-                    <span style="font-size:1.2rem;">🔊</span> ყველა მოსწავლე
-                </button>
-                ${users.map(u => `<button onclick="closeCallTargetModal();initiateCall('${escapeHtml(u)}')" style="padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer;text-align:left;font-size:0.95rem;display:flex;align-items:center;gap:10px;">
-                    <span style="font-size:1.2rem;">👤</span> ${escapeHtml(u)}
-                </button>`).join('')}
-                ${!users.length ? '<p style="color:var(--text-muted);text-align:center;padding:10px;">ონლაინ მოსწავლეები არ არიან</p>' : ''}
-            </div>
-            <button onclick="closeCallTargetModal()" style="margin-top:14px;width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;">გაუქმება</button>
-        </div>`;
-    document.body.appendChild(modal);
-    modal.onclick = e => { if (e.target === modal) closeCallTargetModal(); };
-}
-
-function closeCallTargetModal() {
-    const m = document.getElementById('callTargetModal');
-    if (m) m.remove();
+    const choices = ['ყველა', ...users];
+    const choice = prompt('ვის დაურეკოთ?\n' + choices.map((c,i) => i + ': ' + c).join('\n'));
+    if (choice === null) return;
+    const idx = parseInt(choice);
+    callTarget = idx === 0 ? 'all' : (users[idx-1] || 'all');
+    await initiateCall(callTarget);
 }
 
 async function initiateCall(target) {
-    if (!socket) { initSocket(); await new Promise(r => setTimeout(r, 500)); }
-    // Unlock AudioContext on user gesture  
-    try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); await ctx.resume(); } catch(e) {}
+    if (!socket) { alert('ჩატი არ არის გახსნილი!'); return; }
     window._pendingIce = [];
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -3748,17 +3604,7 @@ async function initiateCall(target) {
         localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
         peerConnection.ontrack = e => {
             const audio = document.getElementById('remoteAudio');
-            if (audio) {
-                audio.srcObject = e.streams[0];
-                // unlock audio context first (browser autoplay policy)
-                const tryPlay = () => audio.play().catch(err => {
-                    console.warn('Audio play blocked:', err);
-                    // show a button to user to manually start audio
-                    const bar = document.getElementById('callBarStatus');
-                    if (bar) bar.innerHTML = 'დაკავშირებულია ✓ <button onclick="document.getElementById(\'remoteAudio\').play()" style="margin-left:8px;padding:2px 8px;border-radius:6px;border:none;background:var(--accent);color:#000;cursor:pointer;font-size:0.8rem;">ხმის ჩართვა</button>';
-                });
-                tryPlay();
-            }
+            if (audio) { audio.srcObject = e.streams[0]; audio.play().catch(()=>{}); }
         };
         peerConnection.onicecandidate = e => {
             if (e.candidate && socket) socket.emit('call-ice', { to: target, candidate: e.candidate });
@@ -3790,8 +3636,6 @@ async function acceptCall() {
         if (modal._ringInterval) clearInterval(modal._ringInterval);
         if (modal._autoDecline) clearTimeout(modal._autoDecline);
     }
-    // Unlock AudioContext on user gesture
-    try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); await ctx.resume(); } catch(e) {}
     window._pendingIce = [];
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -3799,17 +3643,7 @@ async function acceptCall() {
         localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
         peerConnection.ontrack = e => {
             const audio = document.getElementById('remoteAudio');
-            if (audio) {
-                audio.srcObject = e.streams[0];
-                // unlock audio context first (browser autoplay policy)
-                const tryPlay = () => audio.play().catch(err => {
-                    console.warn('Audio play blocked:', err);
-                    // show a button to user to manually start audio
-                    const bar = document.getElementById('callBarStatus');
-                    if (bar) bar.innerHTML = 'დაკავშირებულია ✓ <button onclick="document.getElementById(\'remoteAudio\').play()" style="margin-left:8px;padding:2px 8px;border-radius:6px;border:none;background:var(--accent);color:#000;cursor:pointer;font-size:0.8rem;">ხმის ჩართვა</button>';
-                });
-                tryPlay();
-            }
+            if (audio) { audio.srcObject = e.streams[0]; audio.play().catch(()=>{}); }
         };
         peerConnection.onicecandidate = e => {
             if (e.candidate && socket) socket.emit('call-ice', { to: pendingFrom, candidate: e.candidate });
@@ -3896,447 +3730,6 @@ window.onload = async function() {
     // warm search cache in background
     setTimeout(() => buildSearchCache().catch(() => {}), 2000);
 };
-</script>
-<!-- ═══ LESSON PACKAGES SECTION ═══ -->
-<section id="lessonPackages">
-  <div class="section-header">
-    <h2><i class="fa-solid fa-book-open" style="color:var(--accent);margin-right:8px;"></i>ეროვნულის საკითხები</h2>
-  </div>
-
-  <!-- Teacher controls -->
-  <div id="lpTeacherControls" style="display:none;margin-bottom:20px;">
-    <button class="btn" onclick="toggleLPForm()" style="background:var(--accent);color:#000;font-weight:600;">
-      <i class="fa-solid fa-plus"></i> ახალი საკითხი
-    </button>
-    <div id="lpCreateForm" style="display:none;background:var(--card);border-radius:12px;padding:20px;margin-top:16px;max-width:500px;">
-      <h3 style="margin-bottom:12px;">ახალი ეროვნულის საკითხი</h3>
-      <input id="lpTitle" type="text" placeholder="სათაური (მაგ. იგი — ვეფხისტყაოსანი)" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);margin-bottom:10px;">
-      <input id="lpSubject" type="text" placeholder="საგანი (მაგ. ქართული ლიტერატურა)" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);margin-bottom:10px;">
-      <textarea id="lpDesc" placeholder="მოკლე აღწერა" rows="2" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);margin-bottom:10px;resize:vertical;"></textarea>
-      <div style="display:flex;gap:10px;">
-        <button class="btn" onclick="createLessonPackage()" style="background:var(--accent);color:#000;font-weight:600;">შექმნა</button>
-        <button class="btn" onclick="toggleLPForm()" style="background:var(--card-hover);">გაუქმება</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Package list / detail view -->
-  <div id="lpList"></div>
-  <div id="lpDetail" style="display:none;"></div>
-</section>
-
-<script>
-// ─── LESSON PACKAGES ─────────────────────────────────────────────────────────
-let lpPackages = [];
-let lpCurrentId = null;
-
-async function loadLessonPackages() {
-  const role = isAdmin ? 'teacher' : 'student';
-  try {
-    const resp = await fetch('/api/lesson-packages?role=' + role);
-    lpPackages = resp.ok ? await resp.json() : [];
-  } catch(e) { lpPackages = []; }
-  renderLPList();
-}
-
-function renderLPList() {
-  const el = document.getElementById('lpList');
-  const detail = document.getElementById('lpDetail');
-  detail.style.display = 'none';
-  el.style.display = '';
-  document.getElementById('lpTeacherControls').style.display = isAdmin ? 'block' : 'none';
-
-  if (!lpPackages.length) {
-    el.innerHTML = '<p style="color:var(--text-muted);">საკითხები ჯერ არ არის.</p>';
-    return;
-  }
-
-  el.innerHTML = lpPackages.map(pkg => `
-    <div style="background:var(--card);border-radius:14px;padding:20px;margin-bottom:16px;cursor:pointer;transition:box-shadow 0.2s;" onclick="openLPDetail(${pkg.id})" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,0.2)'" onmouseout="this.style.boxShadow='none'">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;">
-        <div>
-          <h3 style="margin:0 0 6px;font-size:1.15rem;">${escapeHtml(pkg.title)}</h3>
-          ${pkg.subject ? `<span style="font-size:0.8rem;background:rgba(250,204,21,0.15);color:var(--accent);padding:2px 10px;border-radius:999px;">${escapeHtml(pkg.subject)}</span>` : ''}
-          ${pkg.description ? `<p style="color:var(--text-muted);margin:8px 0 0;font-size:0.9rem;">${escapeHtml(pkg.description)}</p>` : ''}
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-          <span style="font-size:0.8rem;color:var(--text-muted);">${(pkg.items||[]).length} მასალა</span>
-          ${isAdmin ? `
-            <span style="font-size:0.75rem;padding:3px 10px;border-radius:999px;background:${pkg.published ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'};color:${pkg.published ? '#22c55e' : '#ef4444'};">
-              ${pkg.published ? 'გამოქვეყნებული' : 'დამალული'}
-            </span>
-            <button onclick="event.stopPropagation();toggleLPPublish(${pkg.id})" style="font-size:0.78rem;padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;">
-              ${pkg.published ? 'დამალვა' : 'გამოქვეყნება'}
-            </button>
-            <button onclick="event.stopPropagation();deleteLessonPackage(${pkg.id})" style="font-size:0.78rem;padding:4px 10px;border-radius:8px;border:none;background:rgba(239,68,68,0.15);color:#ef4444;cursor:pointer;">
-              <i class="fa-solid fa-trash"></i>
-            </button>
-          ` : ''}
-        </div>
-      </div>
-    </div>
-  `).join('');
-}
-
-function openLPDetail(id) {
-  lpCurrentId = id;
-  const pkg = lpPackages.find(p => p.id === id);
-  if (!pkg) return;
-  document.getElementById('lpList').style.display = 'none';
-  const detail = document.getElementById('lpDetail');
-  detail.style.display = 'block';
-
-  const itemsHtml = (pkg.items || []).length ? pkg.items.map(item => renderLPItem(item, pkg.id)).join('') : '<p style="color:var(--text-muted);">მასალები ჯერ არ არის.</p>';
-
-  detail.innerHTML = `
-    <button onclick="loadLessonPackages()" style="margin-bottom:20px;background:transparent;border:1px solid var(--border);color:var(--text);padding:8px 16px;border-radius:8px;cursor:pointer;">
-      <i class="fa-solid fa-arrow-left"></i> უკან
-    </button>
-    <h2 style="margin-bottom:6px;">${escapeHtml(pkg.title)}</h2>
-    ${pkg.subject ? `<span style="font-size:0.85rem;background:rgba(250,204,21,0.15);color:var(--accent);padding:3px 12px;border-radius:999px;">${escapeHtml(pkg.subject)}</span>` : ''}
-    ${pkg.description ? `<p style="color:var(--text-muted);margin:12px 0;">${escapeHtml(pkg.description)}</p>` : ''}
-    
-    ${isAdmin ? `
-    <div style="background:var(--card);border-radius:12px;padding:20px;margin:20px 0;">
-      <h3 style="margin-bottom:14px;">მასალის დამატება</h3>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
-        <select id="lpItemType" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);" onchange="showLPItemFields()">
-          <option value="text">📝 ტექსტი / მოთხრობა</option>
-          <option value="video">🎬 YouTube ვიდეო</option>
-          <option value="file">📎 ფაილი / PDF</option>
-          <option value="quiz">❓ ქვიზი</option>
-          <option value="assignment">📋 დავალება (ფაილის ატვირთვა)</option>
-          <option value="editTask">✏️ რედაქტირების დავალება</option>
-          <option value="note">💡 შენიშვნა / განმარტება</option>
-        </select>
-        <input id="lpItemTitle" type="text" placeholder="სათაური" style="flex:1;min-width:180px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
-      </div>
-
-      <!-- TEXT -->
-      <div id="lpItemTextArea" style="margin-bottom:10px;">
-        <textarea id="lpItemContent" placeholder="ტექსტი / მოთხრობა / განმარტება..." rows="6" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);resize:vertical;font-family:inherit;line-height:1.7;"></textarea>
-      </div>
-
-      <!-- VIDEO -->
-      <div id="lpItemVideoArea" style="display:none;margin-bottom:10px;">
-        <input id="lpItemUrl" type="text" placeholder="YouTube URL (მაგ. https://youtu.be/...)" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
-      </div>
-
-      <!-- FILE -->
-      <div id="lpItemFileArea" style="display:none;margin-bottom:10px;">
-        <label style="color:var(--text-muted);font-size:0.9rem;display:block;margin-bottom:6px;">PDF, Word, სურათი ან სხვა ფაილი</label>
-        <input id="lpItemFile" type="file" style="width:100%;padding:8px;">
-      </div>
-
-      <!-- QUIZ -->
-      <div id="lpItemQuizArea" style="display:none;margin-bottom:10px;">
-        <label style="color:var(--text-muted);font-size:0.9rem;display:block;margin-bottom:6px;">აირჩიე არსებული ქვიზი</label>
-        <select id="lpItemQuizId" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
-          <option value="">— ქვიზის არჩევა —</option>
-        </select>
-        <p style="color:var(--text-muted);font-size:0.82rem;margin-top:6px;">* ქვიზები "ქვიზები" განყოფილებაში იქმნება</p>
-      </div>
-
-      <!-- ASSIGNMENT -->
-      <div id="lpItemAssignmentArea" style="display:none;margin-bottom:10px;">
-        <textarea id="lpItemAssignmentDesc" placeholder="დავალების აღწერა — რა უნდა გააკეთოს მოსწავლემ?" rows="3" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);resize:vertical;margin-bottom:8px;"></textarea>
-        <label style="color:var(--text-muted);font-size:0.9rem;display:block;margin-bottom:6px;">დავალების ფაილი (არასავალდებულო)</label>
-        <input id="lpItemAssignmentFile" type="file" style="width:100%;padding:8px;">
-      </div>
-
-      <!-- EDIT TASK -->
-      <div id="lpItemEditTaskArea" style="display:none;margin-bottom:10px;">
-        <textarea id="lpItemSourceText" placeholder="დასარედაქტირებელი ტექსტი (შეცდომებით)" rows="4" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);resize:vertical;margin-bottom:8px;font-family:inherit;"></textarea>
-        <textarea id="lpItemCorrectText" placeholder="სწორი ვარიანტი (სურვილისამებრ — ავტოშემოწმებისთვის)" rows="4" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);resize:vertical;font-family:inherit;"></textarea>
-      </div>
-
-      <!-- NOTE -->
-      <div id="lpItemNoteArea" style="display:none;margin-bottom:10px;">
-        <textarea id="lpItemNote" placeholder="შენიშვნა, რჩევა ან მნიშვნელოვანი ინფო..." rows="3" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);resize:vertical;border-left:3px solid var(--accent);"></textarea>
-      </div>
-
-      <button onclick="addLPItem(${pkg.id})" style="background:var(--accent);color:#000;font-weight:600;padding:10px 24px;border-radius:8px;border:none;cursor:pointer;font-size:0.95rem;">
-        <i class="fa-solid fa-plus"></i> დამატება
-      </button>
-    </div>
-    ` : ''}
-
-    <div id="lpItemsList">${itemsHtml}</div>
-  `;
-}
-
-function showLPItemFields() {
-  const type = document.getElementById('lpItemType').value;
-  document.getElementById('lpItemTextArea').style.display       = type === 'text' ? 'block' : 'none';
-  document.getElementById('lpItemVideoArea').style.display      = type === 'video' ? 'block' : 'none';
-  document.getElementById('lpItemFileArea').style.display       = type === 'file' ? 'block' : 'none';
-  document.getElementById('lpItemQuizArea').style.display       = type === 'quiz' ? 'block' : 'none';
-  document.getElementById('lpItemAssignmentArea').style.display = type === 'assignment' ? 'block' : 'none';
-  document.getElementById('lpItemEditTaskArea').style.display   = type === 'editTask' ? 'block' : 'none';
-  document.getElementById('lpItemNoteArea').style.display       = type === 'note' ? 'block' : 'none';
-
-  // Load quizzes when quiz type selected
-  if (type === 'quiz') {
-    fetch('/api/quizzes').then(r => r.json()).then(quizzes => {
-      const sel = document.getElementById('lpItemQuizId');
-      sel.innerHTML = '<option value="">— ქვიზის არჩევა —</option>' +
-        quizzes.map(q => `<option value="${q.id}">${escapeHtml(q.title)}</option>`).join('');
-    });
-  }
-}
-
-function renderLPItem(item, pkgId) {
-  const icon = {text:'📝', video:'🎬', file:'📎', quiz:'❓', assignment:'📋', editTask:'✏️', note:'💡'}[item.type] || '📄';
-  const typeLabel = {text:'ტექსტი', video:'ვიდეო', file:'ფაილი', quiz:'ქვიზი', assignment:'დავალება', editTask:'რედაქტირება', note:'შენიშვნა'}[item.type] || '';
-
-  let body = '';
-
-  if (item.type === 'text') {
-    body = `<div style="background:var(--bg);border-radius:8px;padding:16px;margin-top:12px;white-space:pre-wrap;line-height:1.8;font-size:0.95rem;">${escapeHtml(item.content || '')}</div>`;
-
-  } else if (item.type === 'video') {
-    const videoId = extractYouTubeId(item.url || '');
-    body = videoId
-      ? `<div style="margin-top:12px;border-radius:10px;overflow:hidden;aspect-ratio:16/9;"><iframe width="100%" height="100%" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen style="display:block;"></iframe></div>`
-      : `<a href="${escapeHtml(item.url)}" target="_blank" style="color:var(--accent);margin-top:8px;display:inline-block;">${escapeHtml(item.url)}</a>`;
-
-  } else if (item.type === 'file') {
-    const ext = (item.originalName || '').split('.').pop().toLowerCase();
-    const isPdf = ext === 'pdf';
-    const isImg = ['jpg','jpeg','png','gif','webp'].includes(ext);
-    if (isImg) {
-      body = `<img src="${escapeHtml(item.fileUrl)}" style="max-width:100%;border-radius:8px;margin-top:12px;" />`;
-    } else {
-      body = `<a href="${escapeHtml(item.fileUrl)}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:10px 18px;background:rgba(250,204,21,0.1);border:1px solid rgba(250,204,21,0.3);border-radius:8px;color:var(--accent);text-decoration:none;font-weight:500;">
-        <i class="fa-solid fa-${isPdf ? 'file-pdf' : 'file-arrow-down'}"></i>${escapeHtml(item.originalName || 'ფაილი')}
-      </a>`;
-    }
-
-  } else if (item.type === 'quiz') {
-    body = `<div style="margin-top:12px;padding:14px;background:rgba(250,204,21,0.07);border-radius:8px;border:1px solid rgba(250,204,21,0.2);">
-      <p style="margin:0 0 10px;color:var(--text-muted);font-size:0.9rem;">ქვიზი ჩართულია ამ საკითხში</p>
-      <button onclick="openQuizFromLP(${item.quizId})" style="background:var(--accent);color:#000;font-weight:600;padding:8px 20px;border-radius:8px;border:none;cursor:pointer;">
-        <i class="fa-solid fa-play"></i> ქვიზის დაწყება
-      </button>
-    </div>`;
-
-  } else if (item.type === 'assignment') {
-    body = `<div style="margin-top:12px;padding:14px;background:rgba(99,102,241,0.07);border-radius:8px;border:1px solid rgba(99,102,241,0.2);">
-      <p style="margin:0 0 10px;white-space:pre-wrap;line-height:1.7;">${escapeHtml(item.content || '')}</p>
-      ${item.fileUrl ? `<a href="${escapeHtml(item.fileUrl)}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(250,204,21,0.1);border-radius:8px;color:var(--accent);text-decoration:none;font-size:0.9rem;"><i class="fa-solid fa-file-arrow-down"></i> დავალების ფაილი</a>` : ''}
-      ${!isAdmin ? `<div style="margin-top:12px;">
-        <input type="file" id="assignUpload_${item.id}" style="margin-bottom:8px;width:100%;">
-        <button onclick="submitLPAssignment(${pkgId}, ${item.id})" style="background:var(--accent);color:#000;font-weight:600;padding:8px 20px;border-radius:8px;border:none;cursor:pointer;">
-          <i class="fa-solid fa-upload"></i> დავალების გაგზავნა
-        </button>
-      </div>` : ''}
-    </div>`;
-
-  } else if (item.type === 'editTask') {
-    const correctJson = item.correctText ? JSON.stringify(item.correctText) : 'null';
-    body = `<div style="margin-top:12px;padding:14px;background:rgba(16,185,129,0.07);border-radius:8px;border:1px solid rgba(16,185,129,0.2);">
-      <p style="margin:0 0 8px;font-weight:600;">📄 საწყისი ტექსტი (შეცდომებიანი):</p>
-      <div style="background:var(--bg);border-radius:6px;padding:12px;margin-bottom:12px;white-space:pre-wrap;line-height:1.8;font-family:inherit;">${escapeHtml(item.content || '')}</div>
-      ${!isAdmin ? `
-        <label style="display:block;margin-bottom:6px;font-weight:600;">✏️ შეიყვანე გასწორებული ვარიანტი:</label>
-        <textarea id="editAnswer_lp_${item.id}" rows="5" placeholder="ჩაწერე შენი გასწორებული ტექსტი..."
-          oninput="updateEditPreview('lp_${item.id}', ${correctJson})"
-          style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);resize:vertical;font-family:inherit;line-height:1.7;margin-bottom:6px;"></textarea>
-        <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px;" id="editScore_lp_${item.id}"></div>
-        ${item.correctText ? `
-        <div style="margin-bottom:10px;">
-          <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:4px;">📍 შეცდომების გამოყოფა:</div>
-          <div id="editPreview_lp_${item.id}" style="min-height:50px;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:8px;white-space:pre-wrap;line-height:1.8;font-size:0.9rem;">
-            <span style="color:var(--text-muted);">აქ გამოჩნდება შეცდომები...</span>
-          </div>
-          <div style="margin-top:4px;font-size:0.75rem;color:var(--text-muted);display:flex;gap:10px;flex-wrap:wrap;">
-            <span><span style="background:#fecaca;border-radius:2px;padding:0 3px;">წითელი</span> = შეცდომა</span>
-            <span><span style="background:#fef08a;border-radius:2px;padding:0 3px;">ყვითელი</span> = ზედმეტი</span>
-          </div>
-        </div>` : ''}
-        <button onclick="submitLPEditTask(${pkgId}, ${item.id})" style="background:var(--accent);color:#000;font-weight:600;padding:8px 20px;border-radius:8px;border:none;cursor:pointer;width:100%;">
-          <i class="fa-solid fa-paper-plane"></i> გაგზავნა
-        </button>
-      ` : `<div style="padding:8px;background:rgba(34,197,94,0.1);border-radius:6px;color:var(--text-muted);font-size:0.85rem;">სწორი ვარიანტი: <span style="color:var(--text);">${escapeHtml(item.correctText || 'არ არის მითითებული')}</span></div>`}
-    </div>`;
-
-  } else if (item.type === 'note') {
-    body = `<div style="margin-top:10px;padding:14px;background:rgba(250,204,21,0.08);border-left:4px solid var(--accent);border-radius:0 8px 8px 0;">
-      <p style="margin:0;white-space:pre-wrap;line-height:1.7;">${escapeHtml(item.content || '')}</p>
-    </div>`;
-  }
-
-  return `
-    <div style="background:var(--card);border-radius:12px;padding:18px;margin-bottom:14px;border:1px solid var(--border);">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-size:1.3rem;">${icon}</span>
-          <div>
-            <div style="font-weight:600;font-size:1rem;">${escapeHtml(item.title)}</div>
-            <div style="font-size:0.75rem;color:var(--text-muted);">${typeLabel}</div>
-          </div>
-        </div>
-        ${isAdmin ? `<button onclick="deleteLPItem(${pkgId}, ${item.id})" style="background:rgba(239,68,68,0.15);color:#ef4444;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:0.82rem;"><i class="fa-solid fa-trash"></i></button>` : ''}
-      </div>
-      ${body}
-    </div>
-  `;
-}
-
-function extractYouTubeId(url) {
-  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
-  return m ? m[1] : null;
-}
-
-function toggleLPForm() {
-  const f = document.getElementById('lpCreateForm');
-  f.style.display = f.style.display === 'none' ? 'block' : 'none';
-}
-
-async function createLessonPackage() {
-  const title = document.getElementById('lpTitle').value.trim();
-  const subject = document.getElementById('lpSubject').value.trim();
-  const description = document.getElementById('lpDesc').value.trim();
-  if (!title) { alert('სათაური სავალდებულოა'); return; }
-  try {
-    const resp = await fetch('/api/lesson-packages', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({title, subject, description})
-    });
-    if (!resp.ok) throw new Error(await resp.text());
-    showToast('საკითხი შეიქმნა ✓');
-    document.getElementById('lpTitle').value = '';
-    document.getElementById('lpSubject').value = '';
-    document.getElementById('lpDesc').value = '';
-    toggleLPForm();
-    loadLessonPackages();
-  } catch(e) { alert('შეცდომა: ' + e.message); }
-}
-
-async function addLPItem(pkgId) {
-  const type = document.getElementById('lpItemType').value;
-  const title = document.getElementById('lpItemTitle').value.trim();
-  if (!title) { alert('სათაური სავალდებულოა'); return; }
-
-  const formData = new FormData();
-  formData.append('type', type);
-  formData.append('title', title);
-
-  if (type === 'text') {
-    formData.append('content', document.getElementById('lpItemContent').value);
-  } else if (type === 'video') {
-    const url = document.getElementById('lpItemUrl').value.trim();
-    if (!url) { alert('YouTube URL სავალდებულოა'); return; }
-    formData.append('url', url);
-  } else if (type === 'file') {
-    const fileInput = document.getElementById('lpItemFile');
-    if (!fileInput.files[0]) { alert('ფაილი სავალდებულოა'); return; }
-    formData.append('file', fileInput.files[0]);
-  } else if (type === 'quiz') {
-    const quizId = document.getElementById('lpItemQuizId').value;
-    if (!quizId) { alert('ქვიზი სავალდებულოა'); return; }
-    formData.append('quizId', quizId);
-  } else if (type === 'assignment') {
-    const desc = document.getElementById('lpItemAssignmentDesc').value.trim();
-    if (!desc) { alert('დავალების აღწერა სავალდებულოა'); return; }
-    formData.append('content', desc);
-    const fileInput = document.getElementById('lpItemAssignmentFile');
-    if (fileInput.files[0]) formData.append('file', fileInput.files[0]);
-  } else if (type === 'editTask') {
-    const sourceText = document.getElementById('lpItemSourceText').value.trim();
-    if (!sourceText) { alert('ტექსტი სავალდებულოა'); return; }
-    formData.append('content', sourceText);
-    formData.append('correctText', document.getElementById('lpItemCorrectText').value.trim());
-  } else if (type === 'note') {
-    formData.append('content', document.getElementById('lpItemNote').value.trim());
-  }
-
-  try {
-    const resp = await fetch('/api/lesson-packages/' + pkgId + '/items', {
-      method: 'POST', body: formData
-    });
-    if (!resp.ok) throw new Error(await resp.text());
-    showToast('მასალა დაემატა ✓');
-    ['lpItemTitle','lpItemContent','lpItemUrl','lpItemAssignmentDesc','lpItemSourceText','lpItemCorrectText','lpItemNote'].forEach(id => {
-      const el = document.getElementById(id); if (el) el.value = '';
-    });
-    ['lpItemFile','lpItemAssignmentFile'].forEach(id => {
-      const el = document.getElementById(id); if (el) el.value = '';
-    });
-    await loadLessonPackages();
-    openLPDetail(pkgId);
-  } catch(e) { alert('შეცდომა: ' + e.message); }
-}
-
-async function submitLPAssignment(pkgId, itemId) {
-  const fileInput = document.getElementById('assignUpload_' + itemId);
-  if (!fileInput || !fileInput.files[0]) { alert('ფაილი სავალდებულოა'); return; }
-  const formData = new FormData();
-  formData.append('file', fileInput.files[0]);
-  formData.append('title', 'საკითხი #' + pkgId + ' — დავალება');
-  formData.append('author', '👤 ' + (currentUsername || currentUser));
-  formData.append('originalFilename', fileInput.files[0].name);
-  try {
-    const resp = await fetch('/api/assignments/upload', { method: 'POST', body: formData });
-    if (!resp.ok) throw new Error(await resp.text());
-    showToast('დავალება გაიგზავნა ✓');
-    fileInput.value = '';
-  } catch(e) { alert('შეცდომა: ' + e.message); }
-}
-
-async function submitLPEditTask(pkgId, itemId) {
-  const input = document.getElementById('editAnswer_lp_' + itemId);
-  const text = input ? input.value.trim() : '';
-  if (!text) { alert('ჩაწერე ტექსტი'); return; }
-  try {
-    const resp = await fetch('/api/edit-submissions', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ taskId: itemId, student: currentUsername || currentUser, text })
-    });
-    if (!resp.ok) throw new Error(await resp.text());
-    showToast('გაიგზავნა ✓');
-    if (input) input.value = '';
-  } catch(e) { alert('შეცდომა: ' + e.message); }
-}
-
-function openQuizFromLP(quizId) {
-  switchTab('quizzes');
-  setTimeout(() => {
-    const btn = document.querySelector(`[onclick="startQuiz(${quizId})"]`);
-    if (btn) btn.click();
-  }, 500);
-}
-
-async function toggleLPPublish(id) {
-  try {
-    const resp = await fetch('/api/lesson-packages/' + id + '/publish', { method: 'PATCH' });
-    if (!resp.ok) throw new Error(await resp.text());
-    const data = await resp.json();
-    showToast(data.published ? 'გამოქვეყნდა ✓' : 'დაიმალა ✓');
-    loadLessonPackages();
-  } catch(e) { alert('შეცდომა: ' + e.message); }
-}
-
-async function deleteLessonPackage(id) {
-  try {
-    const resp = await fetch('/api/lesson-packages/' + id, { method: 'DELETE' });
-    if (!resp.ok) throw new Error(await resp.text());
-    showToast('წაიშალა ✓');
-    loadLessonPackages();
-  } catch(e) { alert('შეცდომა: ' + e.message); }
-}
-
-async function deleteLPItem(pkgId, itemId) {
-  try {
-    const resp = await fetch('/api/lesson-packages/' + pkgId + '/items/' + itemId, { method: 'DELETE' });
-    if (!resp.ok) throw new Error(await resp.text());
-    showToast('წაიშალა ✓');
-    await loadLessonPackages();
-    openLPDetail(pkgId);
-  } catch(e) { alert('შეცდომა: ' + e.message); }
-}
 </script>
 </body>
 </html>
