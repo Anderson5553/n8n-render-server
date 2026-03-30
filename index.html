@@ -3354,7 +3354,7 @@ function initSocket() {
 }
 
 /* ── CHAT UI ── */
-function openChat() {
+async function openChat() {
     initSocket();
     const overlay = document.getElementById('chatOverlay');
     if (overlay) overlay.classList.add('open');
@@ -3362,28 +3362,45 @@ function openChat() {
     const d2 = document.getElementById('chatDotTeacher');
     if (d1) d1.style.display = 'none';
     if (d2) d2.style.display = 'none';
+    // Load history from DB if not loaded yet
+    await loadChatHistory(chatChannel);
     renderChatMessages();
     setTimeout(() => { const el = document.getElementById('chatInput'); if(el) el.focus(); }, 100);
-    // teacher sees call button, students don't
     const callBtn = document.getElementById('callStartBtn');
     if (callBtn) callBtn.style.display = isAdmin ? 'block' : 'none';
+}
+
+async function loadChatHistory(channel) {
+    if (chatMessages[channel] && chatMessages[channel].length > 0) return; // already loaded
+    try {
+        const resp = await fetch('/api/chat/history?channel=' + encodeURIComponent(channel) + '&limit=50');
+        if (!resp.ok) return;
+        const msgs = await resp.json();
+        if (!chatMessages[channel]) chatMessages[channel] = [];
+        // merge - avoid duplicates
+        const existingTimes = new Set(chatMessages[channel].map(m => m.time + m.from));
+        const newMsgs = msgs.filter(m => !existingTimes.has(m.time + m.from));
+        chatMessages[channel] = [...newMsgs, ...chatMessages[channel]];
+    } catch(e) { console.error('History load error:', e); }
 }
 
 function closeChat() {
     document.getElementById('chatOverlay').classList.remove('open');
 }
 
-function setChatChannel(ch, btn) {
+async function setChatChannel(ch, btn) {
     chatChannel = ch;
     chatTarget = ch === 'all' ? null : ch.replace('private:', '');
     document.querySelectorAll('.chat-tab').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
     document.getElementById('chatHeaderTitle').textContent = ch === 'all' ? 'ყველა' : '💬 ' + chatTarget;
+    await loadChatHistory(ch);
     renderChatMessages();
 }
 
-function selectChatUser(username) {
-    const ch = 'private:' + username;
+async function selectChatUser(username) {
+    const me = currentUsername;
+    const ch = 'private:' + [me, username].sort().join(':');
     chatChannel = ch;
     chatTarget = username;
     const privateTab = document.getElementById('chatPrivateTab');
@@ -3391,6 +3408,7 @@ function selectChatUser(username) {
     document.querySelectorAll('.chat-tab').forEach(b => b.classList.remove('active'));
     if (privateTab) privateTab.classList.add('active');
     document.getElementById('chatHeaderTitle').textContent = '💬 ' + username;
+    await loadChatHistory(ch);
     renderChatMessages();
     document.querySelectorAll('.chat-user-pill').forEach(p => {
         p.classList.toggle('selected', p.dataset.username === username);
