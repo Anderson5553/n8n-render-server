@@ -969,7 +969,7 @@
         <div style="text-align:center;color:var(--text-muted);font-size:0.85rem;padding:20px;">შეიყვანეთ შეტყობინება...</div>
     </div>
     <div class="chat-input-area">
-        <input class="chat-input" id="chatInput" placeholder="შეტყობინება..." onkeydown="if(event.key==='Enter')sendChatMessage()">
+        <textarea class="chat-input" id="chatInput" placeholder="შეტყობინება... (Enter — გაგზავნა, Shift+Enter — ახალი სტრიქონი)" rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage();}" style="resize:none;overflow-y:auto;max-height:100px;line-height:1.5;"></textarea>
         <button class="chat-send-btn" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
     </div>
 </div>
@@ -980,7 +980,7 @@
         <div class="call-bar-title" id="callBarTitle">დარეკვა...</div>
         <div class="call-bar-status" id="callBarStatus">მოლოდინი...</div>
     </div>
-    <audio id="remoteAudio" autoplay></audio>
+    <audio id="remoteAudio" autoplay playsinline></audio>
     <button class="call-btn call-btn-mute" id="muteBtn" onclick="toggleMute()" title="დადუმება">
         <i class="fa-solid fa-microphone"></i>
     </button>
@@ -3234,7 +3234,16 @@ let callTarget = 'all';
 let pendingOffer = null;
 let pendingFrom = null;
 
-const STUN = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
+const STUN = { 
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' }
+    ],
+    iceCandidatePoolSize: 10
+};
 
 function initSocket() {
     if (socket) {
@@ -3265,7 +3274,9 @@ function initSocket() {
         const overlay = document.getElementById('chatOverlay');
         if (overlay && overlay.classList.contains('open') && chatChannel === ch) {
             appendChatMessage(msg);
+            if (!msg.mine) playMsgSound();
         } else if (!msg.mine) {
+            playMsgSound();
             const d1 = document.getElementById('chatDot');
             const d2 = document.getElementById('chatDotTeacher');
             if (d1) d1.style.display = 'block';
@@ -3422,11 +3433,27 @@ function appendChatMessage(msg) {
 function buildMsgHtml(msg) {
     const mine = msg.mine || msg.from === currentUsername;
     const time = msg.time ? new Date(msg.time).toLocaleTimeString('ka-GE', {hour:'2-digit',minute:'2-digit'}) : '';
-    return `<div class="chat-msg ${mine?'mine':'other'}">
+    const text = escapeHtml(msg.text || '').replace(/\n/g, '<br>');
+    return `<div class="chat-msg ${mine?'mine':'other'}" style="animation:fadeIn 0.2s ease;">
         ${!mine ? `<div class="chat-msg-author">${escapeHtml(msg.from)}</div>` : ''}
-        ${escapeHtml(msg.text)}
-        <div class="chat-msg-time">${time}</div>
+        <div style="word-break:break-word;line-height:1.5;">${text}</div>
+        <div class="chat-msg-time">${time}${mine ? ' ✓' : ''}</div>
     </div>`;
+}
+
+function playMsgSound() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.15);
+    } catch(e) {}
 }
 
 function sendChatMessage() {
@@ -3435,27 +3462,55 @@ function sendChatMessage() {
     if (!text || !socket) return;
     if (chatChannel === 'all') {
         socket.emit('chat-message', { to: 'all', text });
-    } else {
+    } else if (chatTarget) {
         socket.emit('chat-message', { to: chatTarget, text });
+    } else {
+        socket.emit('chat-message', { to: 'all', text });
     }
     input.value = '';
+    input.style.height = 'auto';
 }
 
 /* ── CALL ── */
 async function startCall() {
     if (!isAdmin) return;
-    // teacher chooses target
+    showCallTargetModal();
+}
+
+function showCallTargetModal() {
     const users = onlineUsersList.map(u => u.username);
-    const choices = ['ყველა', ...users];
-    const choice = prompt('ვის დაურეკოთ?\n' + choices.map((c,i) => i + ': ' + c).join('\n'));
-    if (choice === null) return;
-    const idx = parseInt(choice);
-    callTarget = idx === 0 ? 'all' : (users[idx-1] || 'all');
-    await initiateCall(callTarget);
+    const existing = document.getElementById('callTargetModal');
+    if (existing) existing.remove();
+    const modal = document.createElement('div');
+    modal.id = 'callTargetModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = `
+        <div style="background:var(--card);border-radius:16px;padding:28px;min-width:280px;max-width:360px;width:90%;">
+            <h3 style="margin:0 0 16px;font-size:1.1rem;">📞 ვის დაურეკოთ?</h3>
+            <div style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;">
+                <button onclick="closeCallTargetModal();initiateCall('all')" style="padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer;text-align:left;font-size:0.95rem;display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:1.2rem;">🔊</span> ყველა მოსწავლე
+                </button>
+                ${users.map(u => `<button onclick="closeCallTargetModal();initiateCall('${escapeHtml(u)}')" style="padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer;text-align:left;font-size:0.95rem;display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:1.2rem;">👤</span> ${escapeHtml(u)}
+                </button>`).join('')}
+                ${!users.length ? '<p style="color:var(--text-muted);text-align:center;padding:10px;">ონლაინ მოსწავლეები არ არიან</p>' : ''}
+            </div>
+            <button onclick="closeCallTargetModal()" style="margin-top:14px;width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;">გაუქმება</button>
+        </div>`;
+    document.body.appendChild(modal);
+    modal.onclick = e => { if (e.target === modal) closeCallTargetModal(); };
+}
+
+function closeCallTargetModal() {
+    const m = document.getElementById('callTargetModal');
+    if (m) m.remove();
 }
 
 async function initiateCall(target) {
-    if (!socket) { alert('ჩატი არ არის გახსნილი!'); return; }
+    if (!socket) { initSocket(); await new Promise(r => setTimeout(r, 500)); }
+    // Unlock AudioContext on user gesture  
+    try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); await ctx.resume(); } catch(e) {}
     window._pendingIce = [];
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -3463,7 +3518,17 @@ async function initiateCall(target) {
         localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
         peerConnection.ontrack = e => {
             const audio = document.getElementById('remoteAudio');
-            if (audio) { audio.srcObject = e.streams[0]; audio.play().catch(()=>{}); }
+            if (audio) {
+                audio.srcObject = e.streams[0];
+                // unlock audio context first (browser autoplay policy)
+                const tryPlay = () => audio.play().catch(err => {
+                    console.warn('Audio play blocked:', err);
+                    // show a button to user to manually start audio
+                    const bar = document.getElementById('callBarStatus');
+                    if (bar) bar.innerHTML = 'დაკავშირებულია ✓ <button onclick="document.getElementById(\'remoteAudio\').play()" style="margin-left:8px;padding:2px 8px;border-radius:6px;border:none;background:var(--accent);color:#000;cursor:pointer;font-size:0.8rem;">ხმის ჩართვა</button>';
+                });
+                tryPlay();
+            }
         };
         peerConnection.onicecandidate = e => {
             if (e.candidate && socket) socket.emit('call-ice', { to: target, candidate: e.candidate });
@@ -3495,6 +3560,8 @@ async function acceptCall() {
         if (modal._ringInterval) clearInterval(modal._ringInterval);
         if (modal._autoDecline) clearTimeout(modal._autoDecline);
     }
+    // Unlock AudioContext on user gesture
+    try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); await ctx.resume(); } catch(e) {}
     window._pendingIce = [];
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -3502,7 +3569,17 @@ async function acceptCall() {
         localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
         peerConnection.ontrack = e => {
             const audio = document.getElementById('remoteAudio');
-            if (audio) { audio.srcObject = e.streams[0]; audio.play().catch(()=>{}); }
+            if (audio) {
+                audio.srcObject = e.streams[0];
+                // unlock audio context first (browser autoplay policy)
+                const tryPlay = () => audio.play().catch(err => {
+                    console.warn('Audio play blocked:', err);
+                    // show a button to user to manually start audio
+                    const bar = document.getElementById('callBarStatus');
+                    if (bar) bar.innerHTML = 'დაკავშირებულია ✓ <button onclick="document.getElementById(\'remoteAudio\').play()" style="margin-left:8px;padding:2px 8px;border-radius:6px;border:none;background:var(--accent);color:#000;cursor:pointer;font-size:0.8rem;">ხმის ჩართვა</button>';
+                });
+                tryPlay();
+            }
         };
         peerConnection.onicecandidate = e => {
             if (e.candidate && socket) socket.emit('call-ice', { to: pendingFrom, candidate: e.candidate });
