@@ -1504,7 +1504,10 @@ const { Server } = require('socket.io');
 
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: '*', methods: ['GET','POST'] }
+  cors: { origin: '*', methods: ['GET','POST'] },
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  transports: ['websocket', 'polling']
 });
 
 const onlineUsers = new Map();
