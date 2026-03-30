@@ -2745,6 +2745,7 @@ async function loadEditTasks() {
                     <div style="white-space:pre-wrap;margin-top:6px;line-height:1.7;">${escapeHtml(t.correctText)}</div>
                   </div>` : '';
 
+            const correctJson = t.correctText ? JSON.stringify(t.correctText) : 'null';
             const studentForm = !isAdmin && currentUser !== 'სტუმარი' ? `
                 <div style="margin-top:16px;">
                     <label style="display:block;margin-bottom:8px;font-weight:600;color:var(--text);">
@@ -2753,28 +2754,12 @@ async function loadEditTasks() {
                     <textarea
                         id="editAnswer_${t.id}"
                         placeholder="ჩაწერე შენი გასწორებული ტექსტი..."
-                        rows="6"
-                        oninput="updateEditPreview(${t.id}, ${t.correctText ? JSON.stringify(t.correctText) : 'null'})"
-                        style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);resize:vertical;font-family:inherit;line-height:1.7;font-size:0.95rem;"></textarea>
-
-                    <div style="margin-top:4px;font-size:0.85rem;color:var(--text-muted);" id="editScore_${t.id}"></div>
-
-                    ${t.correctText ? `
-                    <div style="margin-top:12px;">
-                        <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:6px;">📍 შეცდომების გამოყოფა (რეალურ დროში):</div>
-                        <div id="editPreview_${t.id}" style="min-height:60px;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:8px;white-space:pre-wrap;line-height:1.8;font-size:0.95rem;word-break:break-word;">
-                            <span style="color:var(--text-muted);">აქ გამოჩნდება შეცდომები...</span>
-                        </div>
-                        <div style="margin-top:6px;font-size:0.78rem;color:var(--text-muted);display:flex;gap:14px;flex-wrap:wrap;">
-                            <span><span style="background:#fecaca;border-radius:2px;padding:0 4px;">წითელი</span> = შეცდომა</span>
-                            <span><span style="background:#fef08a;border-radius:2px;padding:0 4px;">ყვითელი</span> = ზედმეტი სიტყვა</span>
-                            <span><span style="color:#22c55e;">✓</span> სწორი სიტყვა</span>
-                        </div>
-                    </div>` : ''}
-
-                    <button class="btn btn-accent" onclick="submitEditSolution(${t.id})" style="margin-top:12px;width:100%;padding:10px;font-size:0.95rem;">
-                        <i class="fa-solid fa-paper-plane"></i> ჩაბარება
+                        rows="8"
+                        style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);resize:vertical;font-family:inherit;line-height:1.8;font-size:0.95rem;"></textarea>
+                    <button class="btn btn-accent" onclick="submitEditSolution(${t.id}, ${correctJson})" style="margin-top:10px;width:100%;padding:12px;font-size:0.95rem;">
+                        <i class="fa-solid fa-paper-plane"></i> ჩაბარება და შემოწმება
                     </button>
+                    <div id="editResult_${t.id}" style="display:none;margin-top:16px;"></div>
                 </div>` : '';
 
             return `<div class="card" style="margin-bottom:20px;">
@@ -2799,15 +2784,114 @@ async function deleteEditTask(id) {
         loadEditTasks();
     } catch(e) { alert('შეცდომა: ' + e.message); }
 }
-async function submitEditSolution(taskId) {
+async function submitEditSolution(taskId, correctText) {
     const input = document.getElementById('editAnswer_' + taskId);
     const text = input ? input.value.trim() : '';
     if (!text) { alert('ჩაწერე ტექსტი.'); return; }
-    await fetch('/api/edit-submissions', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ taskId, student: currentUsername || currentUser, text }) });
-    if (input) input.value = '';
+
+    // Save to DB
+    try {
+        await fetch('/api/edit-submissions', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ taskId, student: currentUsername || currentUser, text })
+        });
+        await fetch('/api/notifications', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ user: 'teacher', kind: 'editSubmission', message: (currentUsername || currentUser) + ' ჩააბარა რედაქტირება' })
+        });
+        loadNotifications();
+    } catch(e) { console.error('Submit error:', e); }
+
+    // Show result
+    const resultEl = document.getElementById('editResult_' + taskId);
+    if (resultEl && correctText) {
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = buildEditResult(text, correctText);
+    } else if (resultEl) {
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = '<div style="padding:14px;background:rgba(34,197,94,0.1);border-radius:8px;color:#22c55e;font-weight:600;">✓ ჩაბარდა! მასწავლებელი შეამოწმებს.</div>';
+    }
+
     showToast('ჩაბარდა ✓');
-    await fetch('/api/notifications', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user:'teacher', kind:'editSubmission', message: currentUser + ' ჩააბარა რედაქტირება' }) });
-    loadNotifications();
+}
+
+function buildEditResult(typed, correct) {
+    // Split into tokens (words + punctuation + spaces)
+    const tokenize = str => str.match(/[ა-ჿჰ-ჿ\w]+|[^ა-ჿჰ-ჿ\w]/g) || [];
+    const typedTokens = tokenize(typed);
+    const correctTokens = tokenize(correct);
+
+    // LCS-based diff
+    const n = typedTokens.length, m = correctTokens.length;
+    const dp = Array.from({length: n+1}, () => new Array(m+1).fill(0));
+    for (let i = 1; i <= n; i++)
+        for (let j = 1; j <= m; j++)
+            dp[i][j] = typedTokens[i-1] === correctTokens[j-1]
+                ? dp[i-1][j-1] + 1
+                : Math.max(dp[i-1][j], dp[i][j-1]);
+
+    // Backtrack
+    const ops = [];
+    let i = n, j = m;
+    while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && typedTokens[i-1] === correctTokens[j-1]) {
+            ops.unshift({type: 'ok', val: typedTokens[i-1]});
+            i--; j--;
+        } else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) {
+            ops.unshift({type: 'missing', val: correctTokens[j-1]});
+            j--;
+        } else {
+            ops.unshift({type: 'wrong', val: typedTokens[i-1]});
+            i--;
+        }
+    }
+
+    // Count errors (skip spaces/punctuation)
+    let errors = 0, total = 0;
+    ops.forEach(op => {
+        if (/[ა-ჿჰ-ჿ\w]/.test(op.val)) {
+            total++;
+            if (op.type !== 'ok') errors++;
+        }
+    });
+    const correct_count = total - errors;
+    const pct = total > 0 ? Math.round((correct_count / total) * 100) : 100;
+    const color = pct >= 90 ? '#22c55e' : pct >= 70 ? '#f59e0b' : '#ef4444';
+
+    // Build highlighted HTML
+    let html = ops.map(op => {
+        if (op.type === 'ok') {
+            return '<span style="color:var(--text);">' + escapeHtml(op.val) + '</span>';
+        } else if (op.type === 'wrong') {
+            return '<span style="background:#fecaca;color:#991b1b;border-radius:3px;padding:0 2px;text-decoration:underline wavy #ef4444;" title="შეცდომა">' + escapeHtml(op.val) + '</span>';
+        } else {
+            // missing — show what should be there
+            return '<span style="background:#dcfce7;color:#166534;border-radius:3px;padding:0 2px;" title="გამოტოვებული">' + escapeHtml(op.val) + '</span>';
+        }
+    }).join('');
+
+    return \`
+        <div style="border-radius:12px;overflow:hidden;border:1px solid var(--border);">
+            <div style="padding:14px 16px;background:\${color}22;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                <div style="font-weight:700;font-size:1.05rem;color:\${color};">
+                    \${pct >= 90 ? '🏆' : pct >= 70 ? '👍' : '📝'} შედეგი: \${pct}%
+                </div>
+                <div style="font-size:0.88rem;color:var(--text-muted);">
+                    სწორი: <strong style="color:#22c55e;">\${correct_count}</strong> / შეცდომა: <strong style="color:#ef4444;">\${errors}</strong>
+                </div>
+            </div>
+            <div style="padding:16px;">
+                <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:8px;display:flex;gap:14px;flex-wrap:wrap;">
+                    <span><span style="background:#fecaca;border-radius:2px;padding:0 4px;">წითელი</span> = შეცდომა</span>
+                    <span><span style="background:#dcfce7;border-radius:2px;padding:0 4px;">მწვანე</span> = გამოტოვებული</span>
+                    <span>თეთრი = სწორი</span>
+                </div>
+                <div style="white-space:pre-wrap;line-height:1.9;font-size:0.95rem;word-break:break-word;">\${html}</div>
+            </div>
+        </div>
+    \`;
 }
 async function loadEditSubmissions() {
     const wrap = document.getElementById('editSubmissionsList');
