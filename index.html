@@ -2691,33 +2691,20 @@ async function deleteEditTask(id) {
 }
 async function submitEditSolution(taskId) {
     const input = document.getElementById('editAnswer_' + taskId);
+    const btn = document.querySelector('[onclick="submitEditSolution(' + taskId + ')"]');
     const text = input ? input.value.trim() : '';
     if (!text) { alert('ჩაწერე ტექსტი.'); return; }
 
-    // Save to DB
+    // Block re-submission
+    if (btn) { btn.disabled = true; btn.textContent = '✓ ჩაბარდა'; btn.style.background = '#94a3b8'; }
+    if (input) { input.disabled = true; }
+
     try {
-        const resp = await fetch('/api/edit-submissions', {
+        await fetch('/api/edit-submissions', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ taskId, student: currentUsername || currentUser, text })
         });
-        const data = resp.ok ? await resp.json() : {};
-
-        // Show result with diff
-        const resultEl = document.getElementById('editResult_' + taskId);
-        if (resultEl) {
-            resultEl.style.display = 'block';
-            // fetch the task to get correctText
-            const tResp = await fetch('/api/edit-tasks');
-            const tasks = tResp.ok ? await tResp.json() : [];
-            const task = tasks.find(t => t.id === taskId);
-            if (task && task.correctText) {
-                resultEl.innerHTML = buildEditResult(text, task.correctText);
-            } else {
-                resultEl.innerHTML = '<div style="padding:14px;background:rgba(34,197,94,0.1);border-radius:8px;color:#22c55e;font-weight:600;">✓ ჩაბარდა! მასწავლებელი შეამოწმებს.</div>';
-            }
-        }
-
         await fetch('/api/notifications', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -2725,67 +2712,37 @@ async function submitEditSolution(taskId) {
         });
         loadNotifications();
         showToast('ჩაბარდა ✓');
+
+        // Show correct answer only after submission is locked
+        const resultEl = document.getElementById('editResult_' + taskId);
+        if (resultEl) {
+            resultEl.style.display = 'block';
+            const tResp = await fetch('/api/edit-tasks');
+            const tasks = tResp.ok ? await tResp.json() : [];
+            const task = tasks.find(function(t){ return t.id === taskId; });
+            if (task && task.correctText) {
+                resultEl.innerHTML =
+                    '<div style="border-radius:10px;overflow:hidden;border:1px solid var(--border);">' +
+                        '<div style="padding:12px 16px;background:rgba(34,197,94,0.12);border-bottom:1px solid var(--border);font-weight:600;color:#22c55e;">' +
+                            '✓ სწორი ვარიანტი' +
+                        '</div>' +
+                        '<div style="padding:16px;white-space:pre-wrap;line-height:1.9;font-size:0.95rem;">' +
+                            escapeHtml(task.correctText) +
+                        '</div>' +
+                    '</div>';
+            } else {
+                resultEl.innerHTML = '<div style="padding:14px;background:rgba(34,197,94,0.1);border-radius:8px;color:#22c55e;font-weight:600;">✓ ჩაბარდა! მასწავლებელი შეამოწმებს.</div>';
+            }
+        }
     } catch(e) {
         console.error('Submit error:', e);
+        // Re-enable on error
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> ჩაბარება და შემოწმება'; btn.style.background = ''; }
+        if (input) { input.disabled = false; }
         alert('შეცდომა: ' + e.message);
     }
 }
 
-function buildEditResult(typed, correct) {
-    // Split into words preserving spaces/punctuation
-    function splitWords(str) {
-        var result = [], cur = '', i;
-        for (i = 0; i < str.length; i++) {
-            var c = str[i];
-            var isW = (c >= '\u10D0' && c <= '\u10FF') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c === '-';
-            if (isW) { cur += c; }
-            else { if (cur) { result.push({v: cur, w: true}); cur = ''; } result.push({v: c, w: false}); }
-        }
-        if (cur) result.push({v: cur, w: true});
-        return result;
-    }
-
-    var tToks = splitWords(typed);
-    var cToks = splitWords(correct);
-    var tWords = tToks.filter(function(t){return t.w;});
-    var cWords = cToks.filter(function(t){return t.w;});
-
-    // Compare word by word
-    var total = cWords.length;
-    var errors = 0;
-    var tIdx = 0;
-    var html = tToks.map(function(tok) {
-        if (!tok.w) return escapeHtml(tok.v);
-        var correctWord = cWords[tIdx] ? cWords[tIdx].v : null;
-        var isOk = correctWord && tok.v === correctWord;
-        if (!isOk) errors++;
-        tIdx++;
-        if (isOk) {
-            return '<span>' + escapeHtml(tok.v) + '</span>';
-        } else {
-            var title = correctWord ? ' title="სწორია: ' + escapeHtml(correctWord) + '"' : '';
-            return '<span style="background:#fecaca;color:#991b1b;border-radius:3px;padding:0 2px;text-decoration:underline wavy #ef4444;"' + title + '>' + escapeHtml(tok.v) + '</span>';
-        }
-    }).join('');
-
-    var correctCount = Math.max(0, total - errors);
-    var pct = total > 0 ? Math.round((correctCount / total) * 100) : 100;
-    var scoreColor = pct >= 90 ? '#22c55e' : pct >= 70 ? '#f59e0b' : '#ef4444';
-    var emoji = pct >= 90 ? '🏆' : pct >= 70 ? '👍' : '📝';
-
-    return '<div style="border-radius:12px;overflow:hidden;border:1px solid var(--border);">' +
-        '<div style="padding:14px 16px;background:' + scoreColor + '22;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">' +
-            '<div style="font-weight:700;font-size:1.05rem;color:' + scoreColor + ';">' + emoji + ' შედეგი: ' + pct + '%</div>' +
-            '<div style="font-size:0.88rem;color:var(--text-muted);">სწორი: <strong style="color:#22c55e;">' + correctCount + '</strong> / შეცდომა: <strong style="color:#ef4444;">' + errors + '</strong> სიტყვა</div>' +
-        '</div>' +
-        '<div style="padding:16px;">' +
-            '<div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px;">' +
-                '<span style="background:#fecaca;border-radius:2px;padding:0 4px;">წითელი</span> = შეცდომა (hover-ზე სწორი ვარიანტი)' +
-            '</div>' +
-            '<div style="white-space:pre-wrap;line-height:1.9;font-size:0.95rem;word-break:break-word;">' + html + '</div>' +
-        '</div>' +
-    '</div>';
-}
 async function loadEditSubmissions() {
     const wrap = document.getElementById('editSubmissionsList');
     if (!wrap || !isAdmin) return;
