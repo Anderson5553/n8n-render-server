@@ -1498,7 +1498,43 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'server error' });
 });
 
-// ─── SOCKET.IO + HTTP SERVER ─────────────────────────────────────────────────
+// ─── CHAT HISTORY ────────────────────────────────────────────────────────────
+(async () => { try { await ensureCollection('chatMessages'); } catch(e) {} })();
+
+app.get('/api/chat/history', async (req, res) => {
+  try {
+    const channel = req.query.channel || 'all';
+    const limit = parseInt(req.query.limit) || 50;
+    const msgs = await readCollection('chatMessages');
+    const filtered = msgs
+      .filter(m => m.channel === channel)
+      .slice(-limit);
+    res.json(filtered);
+  } catch(e) {
+    console.error('Chat history error:', e);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+app.post('/api/chat/message', async (req, res) => {
+  try {
+    const { from, text, channel, time } = req.body || {};
+    if (!from || !text) return res.status(400).json({ error: 'from and text required' });
+    const msgs = await readCollection('chatMessages');
+    const newId = await nextIdFor('chatMessages');
+    const msg = { id: newId, from, text, channel: channel || 'all', time: time || new Date().toISOString() };
+    msgs.push(msg);
+    // keep only last 500 messages total
+    const trimmed = msgs.slice(-500);
+    await writeCollection('chatMessages', trimmed);
+    res.status(201).json(msg);
+  } catch(e) {
+    console.error('Save chat message error:', e);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+
 const http = require('http');
 const { Server } = require('socket.io');
 
@@ -1522,16 +1558,34 @@ io.on('connection', (socket) => {
   socket.on('chat-message', ({ to, text, group }) => {
     const from = socket.username;
     const msg = { from, text, time: new Date().toISOString(), id: Date.now() };
+    
     if (to === 'all') {
-      io.emit('chat-message', { ...msg, channel: 'all' });
+      const channel = 'all';
+      io.emit('chat-message', { ...msg, channel });
+      // save to DB
+      readCollection('chatMessages').then(msgs => {
+        msgs.push({ id: msgs.length + 1, from, text, channel, time: msg.time });
+        writeCollection('chatMessages', msgs.slice(-500)).catch(()=>{});
+      }).catch(()=>{});
     } else if (group) {
-      io.emit('chat-message', { ...msg, channel: 'group:' + group });
+      const channel = 'group:' + group;
+      io.emit('chat-message', { ...msg, channel });
+      readCollection('chatMessages').then(msgs => {
+        msgs.push({ id: msgs.length + 1, from, text, channel, time: msg.time });
+        writeCollection('chatMessages', msgs.slice(-500)).catch(()=>{});
+      }).catch(()=>{});
     } else {
+      // private message — save with channel = private:sender:receiver
+      const channel = 'private:' + [from, to].sort().join(':');
       const target = [...onlineUsers.values()].find(u => u.username === to);
       if (target) {
         io.to(target.socketId).emit('chat-message', { ...msg, channel: 'private:' + from });
         socket.emit('chat-message', { ...msg, channel: 'private:' + to, mine: true });
       }
+      readCollection('chatMessages').then(msgs => {
+        msgs.push({ id: msgs.length + 1, from, text, channel, time: msg.time, to });
+        writeCollection('chatMessages', msgs.slice(-500)).catch(()=>{});
+      }).catch(()=>{});
     }
   });
 
