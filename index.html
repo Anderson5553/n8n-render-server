@@ -3282,7 +3282,16 @@ function initSocket() {
     });
 
     socket.on('users-online', (users) => {
-        onlineUsersList = users.filter(u => u.username !== currentUsername);
+        // deduplicate by username — keep last occurrence
+        const seen = new Set();
+        const unique = [];
+        for (let i = users.length - 1; i >= 0; i--) {
+            if (!seen.has(users[i].username) && users[i].username !== currentUsername) {
+                seen.add(users[i].username);
+                unique.unshift(users[i]);
+            }
+        }
+        onlineUsersList = unique;
         renderChatUsers();
     });
 
@@ -3314,22 +3323,29 @@ function initSocket() {
         if (subEl) subEl.textContent = channel === 'all' ? '🔊 ჯგუფური ზარი' : '🔒 პირადი ზარი';
         if (modal) {
             modal.classList.add('show');
+            // stop any previous ring first
+            if (modal._ringInterval) { clearInterval(modal._ringInterval); modal._ringInterval = null; }
+            if (modal._ringCtx) { try { modal._ringCtx.close(); } catch(e){} modal._ringCtx = null; }
             // play ring sound
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                modal._ringCtx = ctx;
                 const ringInterval = setInterval(() => {
                     if (!document.getElementById('incomingCall').classList.contains('show')) {
                         clearInterval(ringInterval);
+                        try { ctx.close(); } catch(e) {}
                         return;
                     }
-                    const osc = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc.frequency.value = 480;
-                    gain.gain.value = 0.3;
-                    osc.start();
-                    osc.stop(ctx.currentTime + 0.3);
+                    try {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.frequency.value = 480;
+                        gain.gain.value = 0.3;
+                        osc.start();
+                        osc.stop(ctx.currentTime + 0.3);
+                    } catch(e) {}
                 }, 800);
                 modal._ringInterval = ringInterval;
             } catch(e) {}
@@ -3520,8 +3536,10 @@ async function acceptCall() {
     const modal = document.getElementById('incomingCall');
     if (modal) {
         modal.classList.remove('show');
-        if (modal._ringInterval) clearInterval(modal._ringInterval);
-        if (modal._autoDecline) clearTimeout(modal._autoDecline);
+        if (modal._ringInterval) { clearInterval(modal._ringInterval); modal._ringInterval = null; }
+        if (modal._autoDecline) { clearTimeout(modal._autoDecline); modal._autoDecline = null; }
+        if (modal._ringCtx) { try { modal._ringCtx.close(); } catch(e){} modal._ringCtx = null; }
+
     }
     window._pendingIce = [];
     try {
@@ -3560,8 +3578,9 @@ function declineCall() {
     const modal = document.getElementById('incomingCall');
     if (modal) {
         modal.classList.remove('show');
-        if (modal._ringInterval) clearInterval(modal._ringInterval);
-        if (modal._autoDecline) clearTimeout(modal._autoDecline);
+        if (modal._ringInterval) { clearInterval(modal._ringInterval); modal._ringInterval = null; }
+        if (modal._autoDecline) { clearTimeout(modal._autoDecline); modal._autoDecline = null; }
+        if (modal._ringCtx) { try { modal._ringCtx.close(); } catch(e){} modal._ringCtx = null; }
     }
     if (socket && pendingFrom) socket.emit('call-end', { to: pendingFrom });
     pendingOffer = null;
