@@ -2664,9 +2664,8 @@ async function loadEditTasks() {
                     <textarea id="editAnswer_${t.id}" rows="8" placeholder="ჩაწერე გასწორებული ტექსტი..."
                         style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);resize:vertical;font-family:inherit;line-height:1.8;font-size:0.95rem;box-sizing:border-box;"></textarea>
                     <button class="btn btn-accent" onclick="submitEditSolution(${t.id})" style="margin-top:10px;width:100%;padding:12px;">
-                        <i class="fa-solid fa-paper-plane"></i> ჩაბარება და შემოწმება
+                        <i class="fa-solid fa-paper-plane"></i> ჩაბარება
                     </button>
-                    <div id="editResult_${t.id}" style="display:none;margin-top:16px;"></div>
                 </div>` : '';
             return `<div class="card" style="margin-bottom:20px;">${delBtn}
                 <h3 style="margin-bottom:8px;">${escapeHtml(t.title)}</h3>
@@ -2691,14 +2690,8 @@ async function deleteEditTask(id) {
 }
 async function submitEditSolution(taskId) {
     const input = document.getElementById('editAnswer_' + taskId);
-    const btn = document.querySelector('[onclick="submitEditSolution(' + taskId + ')"]');
     const text = input ? input.value.trim() : '';
     if (!text) { alert('ჩაწერე ტექსტი.'); return; }
-
-    // Block re-submission
-    if (btn) { btn.disabled = true; btn.textContent = '✓ ჩაბარდა'; btn.style.background = '#94a3b8'; }
-    if (input) { input.disabled = true; }
-
     try {
         await fetch('/api/edit-submissions', {
             method: 'POST',
@@ -2710,37 +2703,10 @@ async function submitEditSolution(taskId) {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ user: 'teacher', kind: 'editSubmission', message: (currentUsername || currentUser) + ' ჩააბარა რედაქტირება' })
         });
+        if (input) input.value = '';
         loadNotifications();
         showToast('ჩაბარდა ✓');
-
-        // Show correct answer only after submission is locked
-        const resultEl = document.getElementById('editResult_' + taskId);
-        if (resultEl) {
-            resultEl.style.display = 'block';
-            const tResp = await fetch('/api/edit-tasks');
-            const tasks = tResp.ok ? await tResp.json() : [];
-            const task = tasks.find(function(t){ return t.id === taskId; });
-            if (task && task.correctText) {
-                resultEl.innerHTML =
-                    '<div style="border-radius:10px;overflow:hidden;border:1px solid var(--border);">' +
-                        '<div style="padding:12px 16px;background:rgba(34,197,94,0.12);border-bottom:1px solid var(--border);font-weight:600;color:#22c55e;">' +
-                            '✓ სწორი ვარიანტი' +
-                        '</div>' +
-                        '<div style="padding:16px;white-space:pre-wrap;line-height:1.9;font-size:0.95rem;">' +
-                            escapeHtml(task.correctText) +
-                        '</div>' +
-                    '</div>';
-            } else {
-                resultEl.innerHTML = '<div style="padding:14px;background:rgba(34,197,94,0.1);border-radius:8px;color:#22c55e;font-weight:600;">✓ ჩაბარდა! მასწავლებელი შეამოწმებს.</div>';
-            }
-        }
-    } catch(e) {
-        console.error('Submit error:', e);
-        // Re-enable on error
-        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> ჩაბარება და შემოწმება'; btn.style.background = ''; }
-        if (input) { input.disabled = false; }
-        alert('შეცდომა: ' + e.message);
-    }
+    } catch(e) { alert('შეცდომა: ' + e.message); }
 }
 
 async function loadEditSubmissions() {
