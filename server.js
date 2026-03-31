@@ -1551,6 +1551,12 @@ const onlineUsers = new Map();
 io.on('connection', (socket) => {
   socket.on('join', ({ username }) => {
     socket.username = username;
+    // Remove any old socket entries for this username to avoid duplicates
+    for (const [sid, u] of onlineUsers.entries()) {
+      if (u.username === username && sid !== socket.id) {
+        onlineUsers.delete(sid);
+      }
+    }
     onlineUsers.set(socket.id, { username, socketId: socket.id });
     io.emit('users-online', [...onlineUsers.values()]);
   });
