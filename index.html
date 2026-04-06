@@ -979,7 +979,7 @@
         <div class="call-bar-title" id="callBarTitle">დარეკვა...</div>
         <div class="call-bar-status" id="callBarStatus">მოლოდინი...</div>
     </div>
-    <audio id="remoteAudio" autoplay></audio>
+    <audio id="remoteAudio" autoplay playsinline style="display:none;"></audio>
     <button class="call-btn call-btn-mute" id="muteBtn" onclick="toggleMute()" title="დადუმება">
         <i class="fa-solid fa-microphone"></i>
     </button>
@@ -3508,23 +3508,36 @@ document.addEventListener('click', function unlockAudio() {
 }, true);
 
 function playRemoteStream(stream) {
+    console.log('playRemoteStream called, tracks:', stream.getTracks().length);
     var audio = document.getElementById('remoteAudio');
-    if (!audio) return;
+    if (!audio) { console.error('remoteAudio element not found!'); return; }
     audio.srcObject = stream;
     audio.muted = false;
     audio.volume = 1.0;
-    setTimeout(function() {
-        audio.play().then(function() {
-            var s = document.getElementById('callBarStatus');
-            if (s && s.textContent.indexOf('ხმა') === -1) s.textContent = 'დაკავშირებულია ✓';
-        }).catch(function(err) {
-            console.warn('autoplay blocked:', err);
-            var s = document.getElementById('callBarStatus');
-            if (s) {
-                s.innerHTML = 'დაკავშირებულია — <button onclick="var a=document.getElementById(\'remoteAudio\');a.muted=false;a.volume=1;a.play();this.remove();" style="padding:2px 10px;border-radius:6px;border:none;background:#facc15;color:#000;cursor:pointer;font-weight:700;">🔊 ხმა</button>';
-            }
-        });
-    }, 300);
+    // Try multiple times
+    var attempts = 0;
+    function tryPlay() {
+        attempts++;
+        console.log('Play attempt', attempts);
+        var p = audio.play();
+        if (p) {
+            p.then(function() {
+                console.log('Audio playing successfully!');
+                var s = document.getElementById('callBarStatus');
+                if (s) s.textContent = 'დაკავშირებულია ✓ 🔊';
+            }).catch(function(err) {
+                console.warn('Play attempt', attempts, 'failed:', err.name);
+                if (attempts < 3) {
+                    setTimeout(tryPlay, 500);
+                } else {
+                    // Show manual button as last resort
+                    var s = document.getElementById('callBarStatus');
+                    if (s) s.innerHTML = '<button onclick="document.getElementById(\'remoteAudio\').muted=false;document.getElementById(\'remoteAudio\').volume=1;document.getElementById(\'remoteAudio\').play().then(function(){document.getElementById(\'callBarStatus\').textContent=\'✓ ხმა ჩართულია\'});this.parentNode.removeChild(this);" style="padding:4px 14px;border-radius:8px;border:none;background:#facc15;color:#000;cursor:pointer;font-weight:700;font-size:0.9rem;">🔊 ხმის ჩართვა</button>';
+                }
+            });
+        }
+    }
+    setTimeout(tryPlay, 100);
 }
 
 function buildPC(target) {
@@ -3574,9 +3587,14 @@ async function initiateCall(target) {
         return;
     }
     peerConnection = buildPC(target);
-    localStream.getTracks().forEach(function(t){ peerConnection.addTrack(t, localStream); });
+    // Add local tracks AND explicitly request receive
+    localStream.getTracks().forEach(function(t){
+        peerConnection.addTrack(t, localStream);
+    });
+    // Explicitly add receive-only transceiver for remote audio
+    peerConnection.addTransceiver('audio', {direction: 'sendrecv'});
     try {
-        var offer = await peerConnection.createOffer({offerToReceiveAudio:true});
+        var offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
         socket.emit('call-invite', {to:target, callType:'audio', offer:peerConnection.localDescription, channel: target==='all'?'all':'private'});
         document.getElementById('callBarTitle').textContent = target==='all' ? '🔊 ჯგუფური ზარი' : '📞 '+target;
@@ -3612,6 +3630,7 @@ async function acceptCall() {
         var answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
         socket.emit('call-answer', {to:pendingFrom, answer:peerConnection.localDescription});
+        console.log('Answer sent to:', pendingFrom);
         document.getElementById('callBarTitle').textContent = '📞 '+pendingFrom;
         document.getElementById('callBarStatus').textContent = 'დაკავშირება...';
         document.getElementById('callBar').classList.add('active');
