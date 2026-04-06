@@ -980,7 +980,7 @@
         <div class="call-bar-title" id="callBarTitle">დარეკვა...</div>
         <div class="call-bar-status" id="callBarStatus">მოლოდინი...</div>
     </div>
-    <audio id="remoteAudio" autoplay></audio>
+    <audio id="remoteAudio" autoplay playsinline muted="false" style="display:none;"></audio>
     <button class="call-btn call-btn-mute" id="muteBtn" onclick="toggleMute()" title="დადუმება">
         <i class="fa-solid fa-microphone"></i>
     </button>
@@ -3262,7 +3262,119 @@ let callTarget = 'all';
 let pendingOffer = null;
 let pendingFrom = null;
 
-const STUN = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
+// ── WebRTC ─────────────────────────────────────────────────────────────────
+let peerConnection = null;
+let localStream = null;
+let isMuted = false;
+let callTarget = 'all';
+let pendingOffer = null;
+let pendingFrom = null;
+let _audioCtxUnlocked = false;
+
+const STUN = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' },
+    ],
+    iceCandidatePoolSize: 10
+};
+
+// Unlock audio on any user gesture (call this early)
+function unlockAudio() {
+    if (_audioCtxUnlocked) return;
+    const audio = document.getElementById('remoteAudio');
+    if (audio) {
+        audio.muted = true;
+        audio.play().then(() => {
+            audio.pause();
+            audio.muted = false;
+            audio.srcObject = null;
+            _audioCtxUnlocked = true;
+        }).catch(() => {});
+    }
+}
+document.addEventListener('click', unlockAudio, { once: true });
+document.addEventListener('touchstart', unlockAudio, { once: true });
+
+function setAudioStream(stream) {
+    const audio = document.getElementById('remoteAudio');
+    if (!audio) return;
+    audio.srcObject = stream;
+    audio.muted = false;
+    audio.volume = 1.0;
+    const tryPlay = () => {
+        const p = audio.play();
+        if (p) p.catch(err => {
+            console.warn('Audio autoplay blocked:', err);
+            // Show manual play button
+            const status = document.getElementById('callBarStatus');
+            if (status) {
+                status.innerHTML = 'დაკავშირებულია — <button onclick="document.getElementById(\'remoteAudio\').muted=false;document.getElementById(\'remoteAudio\').play();this.remove();" style="padding:2px 10px;border-radius:6px;border:none;background:#facc15;color:#000;cursor:pointer;font-weight:600;font-size:0.82rem;">🔊 ხმა</button>';
+            }
+        });
+    };
+    // small delay to let tracks settle
+    setTimeout(tryPlay, 200);
+}
+
+function createPC(target) {
+    if (peerConnection) {
+        try { peerConnection.close(); } catch(e) {}
+        peerConnection = null;
+    }
+    window._pendingIce = [];
+    const pc = new RTCPeerConnection(STUN);
+
+    pc.ontrack = (e) => {
+        console.log('ontrack fired, streams:', e.streams.length);
+        if (e.streams && e.streams[0]) {
+            setAudioStream(e.streams[0]);
+        } else {
+            // fallback — create stream from track
+            const stream = new MediaStream([e.track]);
+            setAudioStream(stream);
+        }
+        const status = document.getElementById('callBarStatus');
+        if (status) status.textContent = 'დაკავშირებულია ✓';
+    };
+
+    pc.onicecandidate = (e) => {
+        if (e.candidate && socket) {
+            socket.emit('call-ice', { to: target, candidate: e.candidate });
+        }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+        console.log('ICE state:', pc.iceConnectionState);
+        const status = document.getElementById('callBarStatus');
+        if (!status) return;
+        if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+            status.textContent = 'დაკავშირებულია ✓';
+        } else if (pc.iceConnectionState === 'failed') {
+            status.textContent = '❌ კავშირი ვერ დამყარდა';
+            endCall(true);
+        } else if (pc.iceConnectionState === 'disconnected') {
+            status.textContent = 'კავშირი გაწყდა...';
+        }
+    };
+
+    pc.onconnectionstatechange = () => {
+        console.log('Connection state:', pc.connectionState);
+    };
+
+    return pc;
+}
+
+async function addPendingIce(pc) {
+    const candidates = window._pendingIce || [];
+    window._pendingIce = [];
+    for (const c of candidates) {
+        try { await pc.addIceCandidate(c); } catch(e) { console.warn('ICE add err:', e); }
+    }
+}
 
 function initSocket() {
     if (socket) {
@@ -3357,13 +3469,13 @@ function initSocket() {
     });
 
     socket.on('call-answer', async ({ from, answer }) => {
+        console.log('call-answer received from:', from);
         if (peerConnection && peerConnection.signalingState !== 'closed') {
             try {
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-                // flush queued ICE
-                (window._pendingIce || []).forEach(c => peerConnection.addIceCandidate(c).catch(()=>{}));
-                window._pendingIce = [];
-                document.getElementById('callBarStatus').textContent = 'დაკავშირებულია ✓';
+                await addPendingIce(peerConnection);
+                const status = document.getElementById('callBarStatus');
+                if (status) status.textContent = 'დაკავშირება...';
             } catch(e) { console.error('call-answer error:', e); }
         }
     });
@@ -3371,10 +3483,9 @@ function initSocket() {
     socket.on('call-ice', async ({ from, candidate }) => {
         if (!candidate) return;
         const ice = new RTCIceCandidate(candidate);
-        if (peerConnection && peerConnection.remoteDescription) {
-            peerConnection.addIceCandidate(ice).catch(()=>{});
+        if (peerConnection && peerConnection.remoteDescription && peerConnection.remoteDescription.type) {
+            try { await peerConnection.addIceCandidate(ice); } catch(e) { console.warn('ICE err:', e); }
         } else {
-            // queue until remote description is set
             if (!window._pendingIce) window._pendingIce = [];
             window._pendingIce.push(ice);
         }
@@ -3499,79 +3610,66 @@ async function startCall() {
 }
 
 async function initiateCall(target) {
-    if (!socket) { alert('ჩატი არ არის გახსნილი!'); return; }
-    window._pendingIce = [];
+    unlockAudio();
+    if (!socket) { initSocket(); await new Promise(r => setTimeout(r, 800)); }
+    callTarget = target;
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        peerConnection = new RTCPeerConnection(STUN);
-        localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
-        peerConnection.ontrack = e => {
-            const audio = document.getElementById('remoteAudio');
-            if (audio) { audio.srcObject = e.streams[0]; audio.play().catch(()=>{}); }
-        };
-        peerConnection.onicecandidate = e => {
-            if (e.candidate && socket) socket.emit('call-ice', { to: target, candidate: e.candidate });
-        };
-        peerConnection.onconnectionstatechange = () => {
-            const status = document.getElementById('callBarStatus');
-            if (!status) return;
-            const state = peerConnection.connectionState;
-            if (state === 'connected') status.textContent = 'დაკავშირებულია ✓';
-            else if (state === 'disconnected' || state === 'failed') { status.textContent = 'კავშირი გაწყდა'; endCall(true); }
-        };
-        const offer = await peerConnection.createOffer();
+    } catch(e) {
+        alert('მიკროფონი ვერ მოიძებნა!\n' + e.message);
+        return;
+    }
+    peerConnection = createPC(target);
+    localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
+    try {
+        const offer = await peerConnection.createOffer({ offerToReceiveAudio: true });
         await peerConnection.setLocalDescription(offer);
-        socket.emit('call-invite', { to: target, callType: 'audio', offer, channel: target === 'all' ? 'all' : 'private' });
+        socket.emit('call-invite', { to: target, callType: 'audio', offer: peerConnection.localDescription, channel: target === 'all' ? 'all' : 'private' });
         document.getElementById('callBarTitle').textContent = target === 'all' ? '🔊 ჯგუფური ზარი' : '📞 ' + target;
         document.getElementById('callBarStatus').textContent = 'ელოდება პასუხს...';
         document.getElementById('callBar').classList.add('active');
-        callTarget = target;
     } catch(e) {
-        alert('მიკროფონი ვერ მოიძებნა: ' + e.message);
+        console.error('Initiate call error:', e);
+        alert('შეცდომა: ' + e.message);
         endCall(false);
     }
 }
 
 async function acceptCall() {
+    unlockAudio();
     const modal = document.getElementById('incomingCall');
     if (modal) {
         modal.classList.remove('show');
         if (modal._ringInterval) { clearInterval(modal._ringInterval); modal._ringInterval = null; }
         if (modal._autoDecline) { clearTimeout(modal._autoDecline); modal._autoDecline = null; }
         if (modal._ringCtx) { try { modal._ringCtx.close(); } catch(e){} modal._ringCtx = null; }
-
     }
-    window._pendingIce = [];
+    if (!pendingOffer || !pendingFrom) return;
+    callTarget = pendingFrom;
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        peerConnection = new RTCPeerConnection(STUN);
-        localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
-        peerConnection.ontrack = e => {
-            const audio = document.getElementById('remoteAudio');
-            if (audio) { audio.srcObject = e.streams[0]; audio.play().catch(()=>{}); }
-        };
-        peerConnection.onicecandidate = e => {
-            if (e.candidate && socket) socket.emit('call-ice', { to: pendingFrom, candidate: e.candidate });
-        };
-        peerConnection.onconnectionstatechange = () => {
-            const status = document.getElementById('callBarStatus');
-            if (status) status.textContent = peerConnection.connectionState === 'connected' ? 'დაკავშირებულია ✓' : peerConnection.connectionState;
-        };
+    } catch(e) {
+        alert('მიკროფონი ვერ მოიძებნა!\n' + e.message);
+        return;
+    }
+    peerConnection = createPC(pendingFrom);
+    localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
+    try {
         await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer));
-        // add queued ICE candidates
-        (window._pendingIce || []).forEach(c => peerConnection.addIceCandidate(c).catch(()=>{}));
-        window._pendingIce = [];
+        await addPendingIce(peerConnection);
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
-        if (socket) socket.emit('call-answer', { to: pendingFrom, answer });
+        if (socket) socket.emit('call-answer', { to: pendingFrom, answer: peerConnection.localDescription });
         document.getElementById('callBarTitle').textContent = '📞 ' + pendingFrom;
-        document.getElementById('callBarStatus').textContent = 'დაკავშირებულია ✓';
+        document.getElementById('callBarStatus').textContent = 'დაკავშირება...';
         document.getElementById('callBar').classList.add('active');
-        callTarget = pendingFrom;
     } catch(e) {
+        console.error('Accept call error:', e);
         alert('შეცდომა: ' + e.message);
         endCall(false);
     }
+    pendingOffer = null;
+    pendingFrom = null;
 }
 
 function declineCall() {
@@ -3593,18 +3691,21 @@ function endCall(notify = true) {
     if (peerConnection) { try { peerConnection.close(); } catch(e){} peerConnection = null; }
     if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
     const audio = document.getElementById('remoteAudio');
-    if (audio) audio.srcObject = null;
+    if (audio) { audio.srcObject = null; audio.muted = false; }
     document.getElementById('callBar').classList.remove('active');
     const modal = document.getElementById('incomingCall');
     if (modal) {
         modal.classList.remove('show');
-        if (modal._ringInterval) clearInterval(modal._ringInterval);
-        if (modal._autoDecline) clearTimeout(modal._autoDecline);
+        if (modal._ringInterval) { clearInterval(modal._ringInterval); modal._ringInterval = null; }
+        if (modal._autoDecline) { clearTimeout(modal._autoDecline); modal._autoDecline = null; }
+        if (modal._ringCtx) { try { modal._ringCtx.close(); } catch(e){} modal._ringCtx = null; }
     }
     isMuted = false;
     window._pendingIce = [];
     const muteBtn = document.getElementById('muteBtn');
     if (muteBtn) { muteBtn.classList.remove('muted'); muteBtn.innerHTML = '<i class="fa-solid fa-microphone"></i>'; }
+    const status = document.getElementById('callBarStatus');
+    if (status) status.textContent = 'მოლოდინი...';
 }
 
 function toggleMute() {
